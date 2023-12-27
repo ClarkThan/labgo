@@ -1,0 +1,7 @@
+es7: &es7
+  username: "elasticX"
+  password: "123456"
+  addrs:
+    - "http://127.0.0.1:9200"
+
+index_name: rocketqa
