@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"reflect"
 	"strings"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cmp/cmp"
 	"github.com/timonwong/dbr"
@@ -27,8 +29,59 @@ var (
 	ctx  context.Context = context.Background()
 )
 
-func Main() {
-	demo9()
+func init() {
+	initQA("meiqia")
+}
+
+func initQA(database string) {
+	// dsn := "test:12345687@tcp(127.0.0.1:3306)/test?charset=utf8&parseTime=True&loc=Local"
+	dsn := fmt.Sprintf("meiqia:f_xByc=9Dy+ZCbH1@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/%s?charset=utf8&parseTime=True&loc=Local", database)
+
+	// opens a database
+	conn, err := dbr.Open("mysql", dsn, &dbr.NullEventReceiver{})
+	if err != nil {
+		log.Fatalln("err: ", err)
+	}
+
+	log.Println("mysql orm of dbr run...")
+
+	// 设置连接池相关参数
+	conn.SetMaxOpenConns(3)
+	conn.SetMaxIdleConns(2)
+	// conn.SetConnMaxLifetime(dbConf.MaxLifetime)
+	// conn.SetConnMaxIdleTime(dbConf.MaxIdleTime)
+
+	sess = conn.NewSession(nil) // 每次查询都是一个session会话操作
+}
+
+func initLocal() {
+	log.Println("mysql orm of dbr run...")
+	dbConf := &DBConf{
+		Ip:           "127.0.0.1",
+		Port:         3306,
+		User:         "test",
+		Password:     "12345687",
+		Database:     "test",
+		MaxIdleConns: 10,
+		MaxOpenConns: 100,
+		ParseTime:    true,
+	}
+
+	dsn, err := dbConf.DSN()
+	if err != nil {
+		log.Fatalln("err: ", err)
+	}
+
+	// opens a database
+	conn, _ := dbr.Open("mysql", dsn, &dbr.NullEventReceiver{})
+
+	// 设置连接池相关参数
+	conn.SetMaxOpenConns(dbConf.MaxOpenConns)
+	conn.SetMaxIdleConns(dbConf.MaxIdleConns)
+	conn.SetConnMaxLifetime(dbConf.MaxLifetime)
+	conn.SetConnMaxIdleTime(dbConf.MaxIdleTime)
+
+	sess = conn.NewSession(nil) // 每次查询都是一个session会话操作
 }
 
 func demo1() {
@@ -137,36 +190,6 @@ func demo4() {
 	if dat, err := json.Marshal(sss); err == nil {
 		log.Println("sss: ", string(dat))
 	}
-}
-
-func init() {
-	log.Println("mysql orm of dbr run...")
-	dbConf := &DBConf{
-		Ip:           "127.0.0.1",
-		Port:         3306,
-		User:         "test",
-		Password:     "12345687",
-		Database:     "test",
-		MaxIdleConns: 10,
-		MaxOpenConns: 100,
-		ParseTime:    true,
-	}
-
-	dsn, err := dbConf.DSN()
-	if err != nil {
-		log.Fatalln("err: ", err)
-	}
-
-	// opens a database
-	conn, _ := dbr.Open("mysql", dsn, &dbr.NullEventReceiver{})
-
-	// 设置连接池相关参数
-	conn.SetMaxOpenConns(dbConf.MaxOpenConns)
-	conn.SetMaxIdleConns(dbConf.MaxIdleConns)
-	conn.SetConnMaxLifetime(dbConf.MaxLifetime)
-	conn.SetConnMaxIdleTime(dbConf.MaxIdleTime)
-
-	sess = conn.NewSession(nil) // 每次查询都是一个session会话操作
 }
 
 // User
@@ -395,4 +418,121 @@ func demo9() {
 func ToSQL(builder dbr.Builder) string {
 	sql, _ := dbr.InterpolateForDialect("?", []any{builder}, dialect.MySQL)
 	return sql
+}
+
+func demo10() {
+	trackIDs := []string{"1fLJKWKKSuQA4hXE9LeB91hVhBU", "1xFSvRLBJMzwVwrF0ZZpYutSZZY", "1zOjmrd12vyU5lTW5qsXvg6faHA"}
+	builder := sess.Select("MAX(id) as last_visit_id").From("visit").
+		Where("enterprise_id = ?", 10).
+		Where("track_id in ?", trackIDs).
+		GroupBy("enterprise_id", "track_id").
+		OrderBy("NULL")
+
+	log.Println(ToSQL(builder))
+
+	lastVisitIDs := make([]string, 0, len(trackIDs))
+	_, err := builder.Load(&lastVisitIDs)
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+
+	log.Printf("last_visit_ids: %v\n", lastVisitIDs)
+}
+
+func demo11() {
+	ids := []int64{1510, 2160, 1880, 999}
+	existIDs := make([]int64, 0, len(ids))
+	cnt, err := sess.Select("id").From("enterprise_sub_source").Where(dbr.Eq("id", ids)).LoadContext(ctx, &existIDs)
+	if err != nil {
+		log.Fatalf("query id fail: %v\n", err)
+	}
+
+	log.Printf("exist ids(%d): %v\n", cnt, existIDs)
+}
+
+type M struct {
+	Name                string         `json:"name"`
+	No                  int64          `json:"no"`
+	TagIDs              []int          `json:"tag_ids"`
+	ClientFirstSendTime *time.Time     `json:"client_first_send_time"`
+	Attrs               map[string]any `json:"attrs"`
+}
+
+func (m *M) ToMap() map[string]any {
+	st := structs.New(m)
+	st.TagName = `json`
+	ret := st.Map()
+	// if m.ClientFirstSendTime == nil {
+	// 	delete(ret, "client_first_send_time")
+	// }
+	return ret
+}
+
+func Main() {
+	// demo11()
+	// m := map[string]any{
+	// 	"name":    "air",
+	// 	"no":      23,
+	// 	"tag_ids": nil,
+	// }
+
+	// now := time.Now().UTC()
+	x := M{Name: "hello", No: 0}
+	m := x.ToMap()
+	t, ok := m["client_first_send_time"].(*time.Time)
+	log.Printf("m: %v %t %t\n", m, ok, t == nil)
+	mStr, _ := json.Marshal(m)
+	log.Println("old json:", string(mStr))
+
+	ret := map[string]any{
+		"name":    m["name"],
+		"tag_ids": orEmptyList(m["tag_ids"]),
+		"no":      m["no"],
+		"fuck":    nil,
+	}
+
+	for _, k := range []string{"first_msg_created_on", "attrs", "tag_ids", "client_first_send_time", "first_response_wait_time", "first_response_agent_id"} {
+		if v, exists := m[k]; exists && v != nil {
+			log.Println("add some non nil field", k)
+			ret[k] = v
+		}
+	}
+
+	log.Printf("ret: %v\n", ret)
+
+	for k, v := range ret {
+		if v == nil {
+			log.Println("del nil kv", k)
+			delete(ret, k)
+			continue
+		}
+		// empty := false
+		// vv := reflect.ValueOf(v)
+		// switch vv.Kind() {
+		// case reflect.Slice, reflect.Map, reflect.Pointer, reflect.Interface:
+		// 	empty = vv.IsNil()
+		// 	// default:
+		// 	// 	log.Println(k, "-->", v)
+		// }
+		// if empty {
+
+		if reflect.ValueOf(v).IsZero() {
+			log.Println("del empty kv", k)
+			delete(ret, k)
+		}
+	}
+	log.Printf("ret: %v\n", ret)
+	retStr, _ := json.Marshal(ret)
+	log.Println("json:", string(retStr))
+}
+
+func orEmptyList(val any) any {
+	// if !reflect.ValueOf(val).IsNil() {
+	// 	return val
+	// }
+	if lst, ok := val.([]any); ok && len(lst) > 0 {
+		return lst
+	}
+
+	return []any{}
 }

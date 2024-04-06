@@ -1,7 +1,9 @@
 package reflectshit
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 )
@@ -32,7 +34,7 @@ func (m *ManyCol) Normal() {
 }
 
 func Main() {
-	demo1()
+	demo2()
 }
 
 func demo1() {
@@ -45,4 +47,46 @@ func demo1() {
 	textField := strings.Replace(field, "var", "Text", 1)
 	text1 := reflect.ValueOf(m).FieldByName(textField)
 	fmt.Println(text1)
+}
+
+type AgentSt struct {
+	Name   string `json:"name"`
+	Avatar string `json:"avatar"`
+	Age    int8   `json:"age"`
+}
+
+type Event struct {
+	Agent   AgentSt `json:"agent"`
+	TrackID string  `json:"track_id"`
+}
+
+func helper(evt any) {
+	// field := reflect.ValueOf(evt).FieldByName("Agent")
+	// field, ok := reflect.TypeOf(evt).Elem().FieldByName("Agent")
+	// if ok {
+	// 	fmt.Println(field.Name)
+	// }
+	x, ok := reflect.TypeOf(evt).FieldByName("Agent")
+	if !ok {
+		log.Fatalf("damn")
+	}
+	// fmt.Println("over 1")
+	x.Tag = reflect.StructTag(`json:"-"`)
+	// fmt.Println("over 2")
+	dat, _ := json.Marshal(evt)
+	fmt.Println("changed:", string(dat))
+}
+
+func demo2() {
+	evt := Event{
+		TrackID: "fuckyou",
+		Agent: AgentSt{
+			Name:   "air",
+			Age:    23,
+			Avatar: "http://meiqia.com",
+		},
+	}
+	dat, _ := json.Marshal(evt)
+	fmt.Println("origin:", string(dat))
+	helper(evt)
 }

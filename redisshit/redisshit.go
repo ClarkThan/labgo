@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -34,10 +35,6 @@ func init() {
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		log.Fatalf("init rdb failed: %v\n", err)
 	}
-}
-
-func Main() {
-	demo8()
 }
 
 func demo1() {
@@ -271,4 +268,254 @@ func demo8() {
 	for k, v := range m {
 		log.Printf("%s -> %s\n", k, v)
 	}
+}
+
+func demo9() {
+	redisKey := "demo9-key"
+	val, err := rdb.Get(ctx, redisKey).Int64()
+	if err != nil {
+		if !errors.Is(err, redis.Nil) {
+			log.Printf("err: %v\n", err)
+			return
+		}
+		val = 0
+	}
+
+	log.Println(val)
+
+	newVal := rdb.Incr(ctx, redisKey).Val()
+	log.Println(newVal)
+}
+
+func demo10() {
+	redisKey := "demo10-key"
+	val := rdb.Exists(ctx, redisKey).Val()
+	log.Println(val)
+}
+
+func genData1(redisKey string) {
+	data := map[string]any{
+		"foo": "bar",
+		"info": map[string]any{
+			"age":  23,
+			"name": "shit",
+			"addr": []string{"earth", "china", "sichuan", "chengdu"},
+		},
+		"array": []map[string]any{
+			{"age": 10, "nums": []int8{9, 12, 23, 45}, "name": "MJ"},
+			{"height": 1.98, "name": "kb"},
+		},
+	}
+
+	dat, err := json.Marshal(data)
+	if err != nil {
+		log.Fatalf("marshal failed: %v\n", err)
+	}
+
+	if err := rdb.Set(ctx, redisKey, dat, 30*time.Minute).Err(); err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+}
+
+func demo11() {
+	redisKey := "demo11-key"
+	genData1(redisKey)
+
+	dat, err := rdb.Get(ctx, redisKey).Bytes()
+	if err != nil {
+		log.Fatalf("redis get error: %v\n", err)
+	}
+
+	info := make(map[string]any)
+	if err := json.Unmarshal(dat, &info); err != nil {
+		log.Fatalf("unmarshal err: %v\n", err)
+	}
+
+	log.Println(info["info"])
+	log.Println(info["array"])
+	arrRaw := info["array"]
+	arr, _ := arrRaw.([]any)
+	log.Println(len(arr))
+}
+
+func genData2(redisKey string) {
+	data := []map[string]any{
+		{"type": "end_conv", "conv": map[string]any{
+			"id":      12,
+			"name":    "mj",
+			"tag_ids": []int8{1, 2, 3},
+			"iters": []map[string]any{
+				{"age": 100, "foo": "hello"},
+				{"age": 200, "bar": []int8{1, 2, 3}},
+				{"age": 100, "baz": 99},
+			},
+		},
+			"arr1": []string{"foo", "bar", "baz"},
+			"arr2": []map[string]any{
+				{"age": 100, "foo": "hello"},
+				{"age": 200, "bar": []int8{1, 2, 3}},
+				{"age": 100, "baz": 99},
+			},
+		},
+		{"type": "visit_page", "visit_page": map[string]any{
+			"url":       "http://meiqia.com",
+			"visit_cnt": 2,
+			"visitor": map[string]any{
+				"name":   "shitclient",
+				"avatar": "http://baidu.com",
+			},
+		}},
+	}
+
+	dat, err := json.Marshal(data)
+	if err != nil {
+		log.Fatalf("marshal failed: %v\n", err)
+	}
+
+	if err := rdb.Set(ctx, redisKey, dat, 30*time.Minute).Err(); err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+}
+
+func demo12() {
+	redisKey := "demo12-key"
+	genData2(redisKey)
+
+	dat, err := rdb.Get(ctx, redisKey).Bytes()
+	if err != nil {
+		log.Fatalf("redis get error: %v\n", err)
+	}
+
+	var info []map[string]any
+	if err := json.Unmarshal(dat, &info); err != nil {
+		log.Fatalf("unmarshal err: %v\n", err)
+	}
+
+	log.Println(len(info))
+	conv, _ := info[0]["conv"].(map[string]any)
+
+	log.Println("conv_id", int64(conv["id"].(float64)))
+
+	// iters, ok := conv["iters"].([]any)
+	// if !ok {
+	// 	log.Println("damn")
+	// 	return
+	// }
+
+	// for _, it := range iters {
+	// 	item, _ := it.(map[string]any)
+	// 	log.Println(item["age"])
+	// }
+
+}
+
+func demo13() {
+	m := map[string]any{"foo": 23}
+	visitPage, ok := m["visit_page"].(map[string]any)
+	if !ok {
+		// return
+		log.Println("damm")
+	}
+
+	visitID, _ := visitPage["visit_id"].(string)
+	log.Println("shit -> ", visitID)
+}
+
+func demo14() {
+	redisKey := "demo14-key"
+	// cnt, err := rdb.Incr(ctx, redisKey).Result()
+	// if err != nil {
+	// 	log.Printf("incr failed: %v\n", err)
+	// 	return
+	// }
+
+	// log.Println(cnt)
+
+	// redisKey := fmt.Sprintf("agent_invite:limit:%d:%s", entID, time.Now().Format("20060102"))
+	now := time.Now()
+	// tomorrow := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	// tomorrow := now.Add(30 * time.Second)
+	// tomorrow := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second()+60, 0, now.Location())
+	tomorrow := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()+1, 0, 0, now.Location())
+
+	ctx := context.Background()
+	reachLimit := false
+	_, _ = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+		defer pipe.ExpireAt(ctx, redisKey, tomorrow)
+		cnt, _ := rdb.Incr(ctx, redisKey).Result()
+		log.Printf("got %d\n", cnt)
+		if cnt >= 10 {
+			reachLimit = true
+		}
+
+		return nil
+	})
+
+	if reachLimit {
+		log.Println("reach limit")
+	}
+}
+
+func enqueue(n, upper int) {
+	if n > upper {
+		return
+	}
+	// score := math.Trunc((float64(time.Now().UnixMicro()) / 1_000_000) * 1000)
+	score := float64(n)
+	member := fmt.Sprintf("track_id:%d", n)
+
+	cnt, err := rdb.ZAdd(ctx, "demo15-key", &redis.Z{
+		Score:  score,
+		Member: member,
+	}).Result()
+
+	if err != nil {
+		log.Fatalf("zadd fail: %v\n", err)
+	}
+	log.Println("zadd success ", cnt)
+	enqueue(n+1, upper)
+}
+
+func demo15() {
+	rank, err := rdb.ZRank(ctx, "demo15-key", "track_id:1004").Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			log.Println("empty")
+			return
+		}
+		log.Fatalf("err: %v\n", err)
+	}
+
+	log.Println("rank ", rank+1)
+}
+
+func demo16(n int) {
+	ok, err := rdb.SetNX(ctx, "tmp:audit", time.Now().Unix(), time.Minute).Result()
+	if err != nil {
+		log.Fatalf("[%d] damn %v\n", n, err)
+	}
+
+	if !ok {
+		log.Println("again ...", n)
+	}
+}
+
+func remove(key string) {
+	_ = rdb.Del(ctx, key).Err()
+}
+
+func demo17(n int) {
+	ts, err := rdb.GetSet(ctx, "tmp:audit", time.Now().Unix()).Result()
+	if ts == "" || errors.Is(err, redis.Nil) {
+		log.Printf("[%d] damn %v\n", n, err)
+		return
+	}
+
+	log.Printf("[%d] -> %s\n", n, ts)
+}
+
+func Main() {
+	remove("demo15-key")
+	enqueue(1, 1008)
+	demo15()
 }
