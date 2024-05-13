@@ -11,7 +11,9 @@ import (
 	"time"
 
 	// "github.com/redis/go-redis/v9"
+	"github.com/ClarkThan/labgo/utils"
 	"github.com/go-redis/redis/v8"
+	"github.com/samber/lo"
 )
 
 type Turn struct {
@@ -514,8 +516,139 @@ func demo17(n int) {
 	log.Printf("[%d] -> %s\n", n, ts)
 }
 
+type ClueItem struct {
+	Text  string `json:"text"`
+	MsgID int64  `json:"msg_id"`
+}
+type ConvClues struct {
+	Tel    []ClueItem `json:"tel,omitempty"`
+	Weixin []ClueItem `json:"weixin,omitempty"`
+	// Email  []ClueItem `json:"email,omitempty"`
+}
+
+func (c *ConvClues) Count() int {
+	return len(c.Tel) + len(c.Weixin) // + len(c.Email)
+}
+
+func (c *ConvClues) ExtractClueTexts() []string {
+	cnt := c.Count()
+	if cnt == 0 {
+		return nil
+	}
+
+	texts := make([]string, 0, cnt)
+	for _, it := range c.Tel {
+		texts = append(texts, it.Text)
+	}
+	// for _, it := range c.Email {
+	// 	texts = append(texts, it.Text)
+	// }
+	for _, it := range c.Weixin {
+		texts = append(texts, it.Text)
+	}
+
+	return texts
+}
+
+func (c *ConvClues) Merge(cc *ConvClues) {
+	if cc.Count() == 0 {
+		return
+	}
+	c.Tel = append(c.Tel, cc.Tel...)
+	c.Tel = lo.UniqBy(c.Tel, func(it ClueItem) string { return it.Text })
+
+	// c.Email = append(c.Email, cc.Email...)
+	// c.Email = lo.UniqBy(c.Email, func(it ClueItem) string { return it.Text })
+
+	c.Weixin = append(c.Weixin, cc.Weixin...)
+	c.Weixin = lo.UniqBy(c.Weixin, func(it ClueItem) string { return it.Text })
+}
+
+func (c *ConvClues) Stringify() string {
+	if c == nil {
+		return `{}`
+	}
+
+	dat, _ := json.Marshal(c)
+	return utils.Bytes2String(dat)
+}
+
+func parseConvCluesByString(clues string) *ConvClues {
+	var cc ConvClues
+	if clues == "" {
+		return &cc
+	}
+
+	err := json.Unmarshal(utils.String2Bytes(clues), &cc)
+	if err != nil {
+		return nil
+	}
+
+	return &cc
+}
+
+func demo18() {
+	newConvClue := &ConvClues{
+		Tel:    []ClueItem{{Text: "17600000060", MsgID: 100}, {Text: "0234-1234567", MsgID: 100}, {Text: "400-609-5530", MsgID: 100}, {Text: "028-12345678", MsgID: 100}},
+		Weixin: []ClueItem{{Text: "abc123", MsgID: 102}, {Text: "foobar", MsgID: 102}},
+		// Email:  []ClueItem{{Text: "test@meiqia.com", MsgID: 100}, {Text: "lz@163.com.cn", MsgID: 100}},
+	}
+
+	var newClueStr string
+
+	redisKey := "demo16-key"
+	clueStr, _ := rdb.Get(ctx, redisKey).Result()
+	if clueStr != "" {
+		oldConvClue := parseConvCluesByString(clueStr)
+		if oldConvClue != nil {
+			oldConvClue.Merge(newConvClue)
+			newClueStr = oldConvClue.Stringify()
+		} else {
+			newClueStr = newConvClue.Stringify()
+		}
+	} else {
+		newClueStr = newConvClue.Stringify()
+	}
+
+	log.Printf("quickhand set new clues: %s\n", newClueStr)
+
+	err := rdb.Set(ctx, redisKey, newClueStr, time.Hour*12).Err()
+	if err != nil {
+		log.Fatalf("set redis fail: %v\n", err)
+	}
+}
+
+func loadQHCluesDetailThenDrop() *ConvClues {
+	redisKey := "demo16-key"
+
+	defer func() {
+		_ = rdb.Del(ctx, redisKey).Err()
+	}()
+
+	dat, err := rdb.Get(ctx, redisKey).Bytes()
+	if err != nil {
+		return nil
+	}
+
+	if len(dat) == 0 {
+		return nil
+	}
+
+	var cc ConvClues
+	err = json.Unmarshal(dat, &cc)
+	if err != nil {
+		log.Printf("unmarshal: %v\n", err)
+		return nil
+	}
+
+	return &cc
+}
+
+func demo19() {
+	c := loadQHCluesDetailThenDrop()
+	log.Printf("got: %+v\n", c)
+}
+
 func Main() {
-	remove("demo15-key")
-	enqueue(1, 1008)
-	demo15()
+	demo18()
 }

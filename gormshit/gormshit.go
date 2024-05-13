@@ -20,10 +20,19 @@ import (
 	"gorm.io/gorm/schema"
 	"gorm.io/plugin/dbresolver"
 
-	// sql "github.com/go-sql-driver/mysql"
 	"github.com/ClarkThan/labgo/gormshit/model"
 	"github.com/bwmarrin/snowflake"
 	sql "github.com/go-sql-driver/mysql"
+)
+
+const (
+	ABC = "hello"
+)
+
+const (
+	ServingTypeConv   int8 = 1 << iota // 对话
+	ServingTypeCall                    // 呼叫
+	ServingTypeTicket                  // 工单
 )
 
 var (
@@ -93,7 +102,7 @@ func init() {
 	// dsn := "test:12345687@tcp(127.0.0.1:3306)/test?charset=utf8&parseTime=True&loc=Local"
 	dsn := "meiqia:f_xByc=9Dy+ZCbH1@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/meiqia?charset=utf8&parseTime=True&loc=Local"
 	//连接MYSQL
-	gormDB, err := gorm.Open(mysql.Open(dsn))
+	gormDB, err := gorm.Open(mysql.Open(dsn)) // , &gorm.Config{})
 	if err != nil {
 		log.Fatalf("连接数据库失败: %v", err)
 	}
@@ -558,6 +567,130 @@ func demo18() {
 	log.Printf("got: %+v\n", res)
 }
 
+type ConvEvaluation struct {
+	ID        int64           `gorm:"column:id;primary_key"`
+	ConvID    int64           `gorm:"column:conversation_id"`
+	Level     int8            `gorm:"column:level"`
+	Resolved  gosql.NullInt16 `gorm:"column:resolved"`
+	Content   string          `gorm:"column:content"`
+	CreatedOn *time.Time      `gorm:"column:created_on"`
+	UpdatedOn *time.Time      `gorm:"column:updated_on"`
+}
+
+func (*ConvEvaluation) TableName() string {
+	return "evaluation"
+}
+
+func demo19() {
+	evaluation := ConvEvaluation{
+		Level: -1, // 这个默认值不能为0
+		// Resolved: -1, // 这个默认值不能为0
+	}
+	err := db.Table(evaluation.TableName()).Select([]string{"level", "resolved"}).
+		Where(`conversation_id = ?`, 16839).First(&evaluation).Error
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Printf("got err: %v\n", err)
+	}
+
+	log.Printf("evaluation: %+v\n", evaluation)
+	if evaluation.Resolved.Valid {
+		log.Println("kkkkk", evaluation.Resolved.Int16)
+	}
+	// log.Println(evaluation.Level, evaluation.Level == 2, evaluation.Resolved == -1)
+	// log.Println(binaryMatch(evaluation.Level, 2))
+	// log.Println(binaryMatch(evaluation.Level, 1))
+	// log.Println(binaryMatch(evaluation.Level, 0))
+	// log.Println(binaryMatch(evaluation.Resolved, 1))
+	// log.Println(binaryMatch(evaluation.Resolved, 0))
+	var m map[string]any
+	log.Println(parseSignedInt[int8](m["resolved"]))
+}
+
+func parseSignedInt[T ~int | ~int8 | ~int64](val any) (t T) {
+	return parseInteger[T](val, -1)
+}
+
+func parseInteger[T ~int | ~int8 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint32 | ~uint64](val any, defaultVal ...T) (t T) {
+	var defVal T = 0
+	if len(defaultVal) > 0 {
+		defVal = defaultVal[0]
+	}
+	if val == nil {
+		return defVal
+	}
+
+	switch v := val.(type) {
+	case int:
+		return T(v)
+	case int8:
+		return T(v)
+	case int16:
+		return T(v)
+	case int32:
+		return T(v)
+	case int64:
+		return T(v)
+	case uint:
+		return T(v)
+	case uint8:
+		return T(v)
+	case uint16:
+		return T(v)
+	case uint32:
+		return T(v)
+	case uint64:
+		return T(v)
+	case float64:
+		return T(v)
+	default:
+		return defVal
+	}
+}
+
+func binaryMatch(level, lvlNum int8) int8 {
+	if level == lvlNum {
+		return 1
+	}
+
+	return 0
+}
+
+func GetHumanAgentIDs(entID int64, serveType ...int8) ([]int64, error) {
+	var servingType int8 = ServingTypeConv
+	if len(serveType) > 0 {
+		servingType = serveType[0]
+	}
+
+	var servingTypes []int8
+	// combinationCnt := int(math.Pow(2, 3)) - 1
+	for i := 1; i <= 7; i++ {
+		it := int8(i)
+		if it&servingType == servingType {
+			servingTypes = append(servingTypes, it)
+		}
+	}
+
+	log.Println("serving_type = ", servingTypes)
+	var agentIDs []int64
+	err := db.Raw("SELECT id FROM agent WHERE enterprise_id = ? AND deleted_at IS NULL AND serving_type in (?) AND privilege not like 'bot%'", entID, servingTypes).Scan(&agentIDs).Error
+	if err != nil {
+		log.Printf("query human agent ids err: %v\n", err)
+		return nil, err
+	}
+
+	return agentIDs, nil
+}
+
+func demo20() {
+	aids, _ := GetHumanAgentIDs(10)
+	log.Println("agent_ids: ", len(aids), aids)
+}
+
+func demo21() {
+	log.Println(ServingTypeConv, ServingTypeCall, ServingTypeTicket)
+}
+
 func Main() {
-	demo18()
+	demo21()
 }
