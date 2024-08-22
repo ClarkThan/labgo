@@ -7,13 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	// "github.com/redis/go-redis/v9"
 	"github.com/ClarkThan/labgo/utils"
 	"github.com/go-redis/redis/v8"
 	"github.com/samber/lo"
+
+	guuid "github.com/gofrs/uuid"
+	"github.com/google/uuid"
 )
 
 type Turn struct {
@@ -649,6 +654,379 @@ func demo19() {
 	log.Printf("got: %+v\n", c)
 }
 
+func demo20() {
+	isOK := rdb.HExists(ctx, "feishu_bind_ents", "123").Val()
+	log.Println("exists! ", isOK)
+}
+
+func demo21() {
+	log.Println("db:", rdb.Options().DB)
+}
+
+func demo22() {
+	// rdb.ZRangeByScore(ctx, "rr:shit", &redis.ZRangeBy{
+	// 	Min: `0`,
+	// 	Max: `+inf`,
+	// })
+	ret, err := rdb.ZRangeWithScores(ctx, "rr:shit", 0, -1).Result()
+	if err != nil {
+		log.Printf("got err: %v\n", err)
+	}
+	for _, z := range ret {
+		fmt.Println(z.Member.(string), z.Score)
+	}
+	fmt.Println(ret == nil)
+
+	x := rdb.ZScore(ctx, "rr:shit", "shit").Val()
+	fmt.Println(x)
+}
+
+type RoundRobinMsg struct {
+	ID       string  `mapstructure:"id" json:"id,omitempty"`
+	Type     string  `mapstructure:"type" json:"type,omitempty"`
+	Value    string  `mapstructure:"value" json:"value"`
+	Interval float32 `mapstructure:"interval" json:"interval"`
+}
+
+func pickMsg(msgs []*RoundRobinMsg, agentID int64, messageID string) *RoundRobinMsg {
+	redisKey := fmt.Sprintf("rr-msg-stats:%d:%s", agentID, messageID)
+
+	if len(msgs) == 1 {
+		m := msgs[0]
+		oldScore := rdb.ZScore(ctx, redisKey, msgs[0].ID).Val()
+		_, err := rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+			pipe.Del(ctx, redisKey)
+			pipe.ZAdd(ctx, redisKey, &redis.Z{Member: m.ID, Score: float64(oldScore + 1)})
+			pipe.Expire(ctx, redisKey, 120*time.Hour) // 其实应该永久保存的，但实际场景应该也OK
+			return nil
+		})
+		if err != nil && !errors.Is(err, redis.Nil) {
+			log.Printf("got err: %v\n", err)
+			return nil
+		}
+		log.Println("即将发送的消息", redisKey, m.ID)
+		return m
+	}
+
+	stats, err := rdb.ZRangeWithScores(ctx, redisKey, 0, -1).Result()
+	if err != nil {
+		log.Printf("mpush fetch round robin stats err: %v\n", err)
+		return nil
+	}
+
+	scoreDict := make(map[string]int, len(stats))
+	for _, z := range stats {
+		k, _ := z.Member.(string)
+		scoreDict[k] = int(z.Score)
+	}
+
+	var got *RoundRobinMsg
+
+	var minScore int
+
+	if len(stats) == 0 { // 一开始没有数据那就从第一个开始
+		got = msgs[0]
+	} else {
+		// k1, _ := stats[0].Member.(string)
+		minScore = int(stats[0].Score)
+		log.Println("--->", minScore)
+		// // 分数最低的可能有多个，要找出来
+		// sameMinScores := map[string]struct{}{k1: {}}
+		// for _, z := range stats[1:] {
+		// 	k, _ := z.Member.(string)
+		// 	v := int(stats[0].Score)
+		// 	if v1 == v {
+		// 		sameMinScores[k] = struct{}{}
+		// 	}
+		// }
+
+		var newIdx int = -1
+		var minIdx int = -1
+		for i, m := range msgs {
+			score, exists := scoreDict[m.ID]
+			if !exists {
+				newIdx = i
+				break
+			} else if score == minScore && minIdx == -1 {
+				minIdx = i
+			}
+		}
+
+		if newIdx != -1 {
+			got = msgs[newIdx]
+		} else if minIdx != -1 {
+			got = msgs[minIdx]
+		} else {
+			got = msgs[0]
+		}
+	}
+
+	log.Println("即将发送的消息 -->", got.ID, minScore)
+
+	pipe := rdb.Pipeline()
+	pipe.Del(ctx, redisKey)
+	for _, m := range msgs {
+		score, exists := scoreDict[m.ID]
+		if !exists && m.ID != got.ID {
+			continue
+		}
+		if m.ID == got.ID {
+			if !exists {
+				score = minScore + 1
+			} else {
+				score++
+			}
+		}
+		pipe.ZAdd(ctx, redisKey, &redis.Z{Member: m.ID, Score: float64(score)})
+		pipe.Expire(ctx, redisKey, 120*time.Hour) // 其实应该永久保存的，但实际场景应该也OK
+	}
+
+	if _, err = pipe.Exec(ctx); err != nil {
+		log.Printf("mpush save round robin stats got: %v\n", err)
+		return nil
+	}
+
+	return got
+}
+
+func pickMsgV2(msgs []*RoundRobinMsg, agentID int64, messageID string) *RoundRobinMsg {
+	redisKey := fmt.Sprintf("rr-msg-l-stats:%d:%s", agentID, messageID)
+
+	if len(msgs) == 1 {
+		m := msgs[0]
+		_, err := rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+			pipe.Del(ctx, redisKey)
+			pipe.RPush(ctx, redisKey, m.ID)
+			pipe.Expire(ctx, redisKey, 120*time.Hour) // 其实应该永久保存的，但实际场景应该也OK
+			return nil
+		})
+		if err != nil && !errors.Is(err, redis.Nil) {
+			log.Printf("got err: %v\n", err)
+			return nil
+		}
+		log.Println("即将发送的消息", redisKey, m.ID)
+		return m
+	}
+
+	queue, err := rdb.LRange(ctx, redisKey, 0, -1).Result()
+	if err != nil {
+		log.Printf("mpush fetch round robin stats err: %v\n", err)
+		return nil
+	}
+
+	log.Println("old queue:", queue)
+
+	dict := make(map[string]struct{}, len(queue))
+	for _, it := range queue {
+		dict[it] = struct{}{}
+	}
+
+	newQueue := make([]string, 0, len(msgs))
+
+	// {ID: "bar"},
+	// {ID: "fuck"},
+	// {ID: "baz"},
+	// {ID: "ok"},
+	newDict := make(map[string]int, len(msgs))
+	newSet := make(map[string]struct{})
+	var todoIdx int = -1
+	// var foundNew bool
+	for i, m := range msgs {
+		newDict[m.ID] = i
+		if _, exists := dict[m.ID]; !exists && todoIdx == -1 {
+			newQueue = append(newQueue, m.ID)
+			todoIdx = i
+			// foundNew = true
+		}
+	}
+
+	// var todoIdx int = -1
+	// for i, m := range msgs {
+	// 	if _, exists := dict[m.ID]; !exists { // 优先考虑新增的
+	// 		newQueue = append(newQueue, m.ID)
+	// 		todoIdx = i
+	// 		break
+	// 	}
+	// }
+
+	// newSet := make(map[string]struct{})
+	// for _, it := range queue {
+	// 	if todoIdx != -1 && it == msgs[todoIdx].ID {
+	// 		continue
+	// 	}
+
+	// 	if _, exists := newDict[it]; exists {
+	// 		newSet[it] = struct{}{}
+	// 		// newQueue = append(newQueue, it)
+	// 		// if todoIdx == -1 {
+	// 		// 	todoIdx = idx
+	// 		// }
+	// 	}
+	// }
+
+	for i, m := range msgs {
+		if _, exists := newSet[m.ID]; exists {
+			newQueue = append(newQueue, m.ID)
+			if todoIdx == -1 {
+				todoIdx = i
+			}
+		}
+	}
+
+	if len(queue) > 0 {
+		newQueue = append(newQueue, queue[0])
+	}
+
+	log.Println("new queue:", newQueue)
+
+	// B -> C -> D
+	// A -> B -> C -> D
+	// 	A -> E -> D -> C
+	// 	F -> A -> C -> E -> B -> D
+	// 	C -> E -> D
+
+	got := msgs[todoIdx]
+
+	log.Println("即将发送的消息 -->", newQueue, got.ID)
+
+	pipe := rdb.Pipeline()
+	pipe.Del(ctx, redisKey)
+	pipe.RPush(ctx, redisKey, newQueue)
+	pipe.Expire(ctx, redisKey, 120*time.Hour) // 其实应该永久保存的，但实际场景应该也OK
+
+	if _, err = pipe.Exec(ctx); err != nil {
+		log.Printf("mpush save round robin stats got: %v\n", err)
+		return nil
+	}
+
+	return got
+}
+
+func demo23() {
+	msgs := []*RoundRobinMsg{
+		{ID: "foo"},
+		{ID: "bar"},
+		// {ID: "fuck"},
+		// {ID: "baz"},
+		// {ID: "ok"},
+		// {ID: "shit"},
+	}
+
+	redisKey := fmt.Sprintf("rr-msg-stats:%d:%s", 100, "123456789")
+
+	for i := 0; i < 1; i++ {
+		m := pickMsg(msgs, 100, "123456789")
+		log.Println(m.ID)
+	}
+	stats, _ := rdb.ZRangeWithScores(ctx, redisKey, 0, -1).Result()
+	for _, z := range stats {
+		log.Println(z.Member, z.Score)
+	}
+}
+
+func demo24() {
+	msgs := []*RoundRobinMsg{
+		{ID: "foo"},
+		{ID: "bar"},
+		// {ID: "fuck"},
+		{ID: "baz"},
+		// {ID: "ok"},
+		// {ID: "shit"},
+	}
+
+	// redisKey := fmt.Sprintf("rr-msg-l-stats:%d:%s", 100, "123456789")
+	for i := 0; i < 1; i++ {
+		m := pickMsgV2(msgs, 100, "123456789")
+		log.Println(m.ID)
+	}
+	// stats, _ := rdb.LRange(ctx, redisKey, 0, -1).Result()
+	// log.Println(stats)
+}
+
+func pickA(msgs []*RoundRobinMsg, redisKey string) *RoundRobinMsg {
+	if len(msgs) == 0 {
+		return nil
+	}
+
+	lastIT := rdb.Get(ctx, redisKey).Val()
+	var got *RoundRobinMsg
+
+	if len(msgs) == 1 {
+		got = msgs[0]
+	} else if lastIT == "" {
+		// rdb.Set(ctx, redisKey, msgs[0].ID, 3*time.Hour)
+		got = msgs[0]
+	} else {
+		var lastIdx int = -1
+		for i, m := range msgs {
+			if m.ID == lastIT {
+				lastIdx = i
+				break
+			}
+		}
+		got = msgs[(lastIdx+1)%len(msgs)]
+	}
+
+	rdb.Set(ctx, redisKey, got.ID, 3*time.Hour)
+	return got
+}
+
+func demo25() {
+	key := "demo25"
+	msgs := []*RoundRobinMsg{
+		{ID: "foo"},
+		{ID: "bar"},
+		{ID: "fuck"},
+		// {ID: "baz"},
+		// {ID: "ok"},
+		// {ID: "shit"},
+	}
+
+	got := pickA(msgs, key)
+	log.Println("got -->", got.ID)
+}
+
+func demo26() {
+	u1 := uuid.NewString()
+	u2 := guuid.Must(guuid.NewV4()).String()
+	log.Println(u1)
+	log.Println(u2)
+}
+
+type UserInfo struct {
+	LastMaxID string `redis:"last_max_id"`
+	LastFinTS string `redis:"last_fin_ts"`
+	APIToken  string `redis:"api_token"`
+}
+
+func demo27() {
+	info := new(UserInfo)
+	if err := rdb.HGetAll(ctx, "demo-27").Scan(info); err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+
+	log.Println("got:", info.LastMaxID)
+
+	rdb.HSet(ctx, "demo-27", "last_max_id", "100")
+	lastMaxID, err := rdb.HGet(ctx, "demo-27", "last_max_id").Int64()
+	if err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+	log.Println("got ->", lastMaxID)
+}
+
+func GoID() string {
+	var buf [64]byte
+	n := runtime.Stack(buf[:], false)
+	return strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+}
+
 func Main() {
-	demo18()
+	// err := utils.Verify("12345678A", "9cbd66f282f4b7347bc065d26cb3ac6ba7756d14bd570db9a2dbc14db92d2e06", "d74f1e50fb8c63fbc67cd1a47cdfd38c")
+	err := utils.Verify("12345678A", "$2a$12$qDo0t6jrhtuWEgJkZnh3YOyAt6/kPIEETEkXkD/CgnG2oQlf85Ake", "")
+	if err != nil {
+		log.Println(err)
+	} else {
+		log.Println("bravo!")
+	}
 }

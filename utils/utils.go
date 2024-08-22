@@ -1,12 +1,16 @@
 package utils
 
 import (
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
 	"reflect"
 	"runtime"
 	"unsafe"
+
+	"github.com/minio/sha256-simd"
 )
 
 func BytesToString(bs []byte) string {
@@ -98,3 +102,37 @@ func Curl(uri string) {
 
 	fmt.Println(string(buf[:n]))
 }
+
+func foo(n int) (int, error) {
+	if n > 100 {
+		return 0, errors.New("too big")
+	}
+
+	return n, nil
+}
+
+func bar(n int) {
+	fmt.Println(n)
+	_, _ = foo(n)
+}
+
+// 循环右移
+func rightRotate(num, k, bits int) string {
+	k = k % bits // 确保 k 在 [0, bits) 范围内
+	val := (num >> k) | (num << (bits - k))
+	return fmt.Sprintf("0x%x", val)
+}
+
+// rightRotate(0x23, 8, 32)  ==  0x23000000
+// rightRotate(0xf2, 24, 32)  ==  0xf200
+
+func Verify(passwd, dbPwd, dbSalt string) error {
+	inputPwd := sha256.Sum256([]byte(passwd + dbSalt))
+	if hex.EncodeToString(inputPwd[:]) != dbPwd {
+		return errors.New("bad pwd")
+	}
+	return nil
+	//return bcrypt.CompareHashAndPassword([]byte(hash), []byte(passwd))
+}
+
+// Verify("12345678A", "9cbd66f282f4b7347bc065d26cb3ac6ba7756d14bd570db9a2dbc14db92d2e06", "d74f1e50fb8c63fbc67cd1a47cdfd38c")

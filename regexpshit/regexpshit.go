@@ -14,11 +14,11 @@ var (
 	UnicodeRegex       = regexp.MustCompile(`\\u[0-9a-f]{4}`)
 	MetaRegexExtractor = regexp2.MustCompile(`(\/)?(?<pattern>.*)(?(1)\/)(?<flags>[gismuy]*)`, 0)
 	SerialNORegex      = regexp.MustCompile(`\d+`)
+	// PhoneRegex         = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{9})(?!\d)`, 0)
+	PhoneRegex   = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3})(?!\d)|(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4})(?!\d)`, 0)
+	mobileRegexp = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3})(?!\d)|(?<!\d)(1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4})(?!\d)`, 0)
+	reTel        = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4}|0(?:\d{2}-\d{8}|\d{3}-\d{7})|\d{3}-\d{3}-\d{4})(?!\d)`, 0)
 )
-
-func Main() {
-	demo4()
-}
 
 func demo1() {
 	raw := `[\u4e00-\u9fa5]{2,8}`
@@ -112,4 +112,46 @@ func MatchByCustomRegexp(validationStr, content string) (bool, string) {
 
 func demo4() {
 	log.Printf("nos = %v\n", SerialNORegex.FindAllStringSubmatch("机器人客服-好+23-45", -1))
+}
+
+func MatchPhone(content string) (bool, string) {
+	matched, err := PhoneRegex.FindStringMatch(content)
+	if err != nil || matched == nil {
+		return false, ""
+	}
+
+	return true, matched.GroupByName("phone").Capture.String()
+}
+
+func demo5() {
+	ok, val := MatchPhone("19182255030")
+	ok, val = MatchPhone("191 8225 5030")
+	// ok, val = MatchPhone("1918 2255 030")
+	if ok {
+		fmt.Println(val)
+	}
+}
+
+func regexp2FindAllString(re *regexp2.Regexp, s string) []string {
+	var matches []string
+	m, _ := re.FindStringMatch(s)
+	for m != nil {
+		matches = append(matches, m.String())
+		m, _ = re.FindNextMatch(m)
+	}
+	return matches
+}
+
+func demo6() {
+	vals := regexp2FindAllString(mobileRegexp, "191 8225 5030")
+	fmt.Println(vals)
+}
+
+func demo7() {
+	vals := regexp2FindAllString(reTel, "19182255030")
+	fmt.Println(vals)
+}
+
+func Main() {
+	demo7()
 }

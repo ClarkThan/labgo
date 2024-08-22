@@ -3,6 +3,7 @@ package gormshit
 import (
 	"context"
 	gosql "database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -691,6 +692,263 @@ func demo21() {
 	log.Println(ServingTypeConv, ServingTypeCall, ServingTypeTicket)
 }
 
+// type SmartGuideTemplate struct {
+// 	TemplateID   string            `gorm:"column:template_id"`
+// 	Target       string            `gorm:"column:target"`
+// 	Rank         float64           `gorm:"column:rank"`
+// 	ManualStatus string            `gorm:"column:manual_status"`
+// 	Settings     SmartGuideSetting `gorm:"column:settings"`
+// 	Details      SmartGuideDetail  `gorm:"column:details"`
+// 	CreatedAt    *time.Time        `gorm:"column:created_at"`
+// }
+
+// func (t *SmartGuideTemplate) TableName() string {
+// 	return "enterprise_mpush_template"
+// }
+
+// type VisitorRule struct {
+// 	Name string `json:"name"`
+// 	Val  string `json:"val"`
+// 	Op   int8   `json:"op"`
+// }
+
+// // {"auto_status":"open","delay":4,"push_begin_time":"","push_end_time":"","push_time":"offline","push_visitor_type":1,"visitor_rules":[],"work_rule":1}
+// type SmartGuideSetting struct {
+// 	AutoStatus      string        `json:"auto_status"`
+// 	Delay           int64         `json:"delay"`
+// 	PushBeginTime   string        `json:"push_begin_time"`
+// 	PushEndTime     string        `json:"push_end_time"`
+// 	PushTime        string        `json:"push_time"`
+// 	VisitorRules    []VisitorRule `json:"visitor_rules"`
+// 	PushVisitorType int8          `json:"push_visitor_type"`
+// 	WorkRule        int8          `json:"work_rule"`
+// }
+
+// func (s SmartGuideSetting) Value() (driver.Value, error) {
+// 	return json.Marshal(s)
+// }
+
+// func (s *SmartGuideSetting) Scan(v any) error {
+// 	switch data := v.(type) {
+// 	case []byte:
+// 		return json.Unmarshal(data, &s)
+// 	case string:
+// 		return json.Unmarshal([]byte(data), &s)
+// 	default:
+// 		return fmt.Errorf("invalid setting field data: %v", v)
+// 	}
+// }
+
+// type innerType struct {
+// 	Type      string `json:"type"`
+// 	Countdown int64  `json:"countdown,omitempty"`
+// }
+
+// type SmartGuideDetail struct {
+// 	AutoAutoBounde   innerType `json:"auto_auto_bounce"`
+// 	AutoStatus       string    `gorm:"column:auto_status"`
+// 	Delay            int64     `gorm:"column:delay"`
+// 	GapSecond        int64     `json:"gap_second"`
+// 	GreetingsContent string    `json:"greetings_content"`
+// 	GreetingsType    int8      `json:"greetings_type"`
+// 	ManualAutoBounce innerType `json:"manual_auto_bounce"`
+// 	ManualGapSecond  int64     `json:"manual_gap_second"`
+// 	ManualPushRate   int8      `json:"manual_push_rate"`
+// 	PushRate         int8      `json:"push_rate"`
+// 	PushTime         string    `json:"push_time"`
+// 	PushVisitorType  int8      `json:"push_visitor_type"`
+// 	SenderID         int64     `json:"sender_id"`
+// }
+
+// func (s SmartGuideDetail) Value() (driver.Value, error) {
+// 	return json.Marshal(s)
+// }
+
+// func (s *SmartGuideDetail) Scan(v any) error {
+// 	switch data := v.(type) {
+// 	case []byte:
+// 		return json.Unmarshal(data, &s)
+// 	case string:
+// 		return json.Unmarshal([]byte(data), &s)
+// 	default:
+// 		return fmt.Errorf("invalid detail field data: %v", v)
+// 	}
+// }
+
+/*
+{
+    "auto_auto_bounce": {
+        "type": "stop"
+    },
+    "auto_status": "open",
+    "delay": 4,
+    "gap_second": 0,
+    "greetings_content": "\u003cp\u003e\u003c/p\u003e",
+    "greetings_content_draft": "{\"blocks\":[{\"key\":\"43km3\",\"text\":\"\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}}],\"entityMap\":{}}",
+    "greetings_style": {
+        "actions": [
+            {
+                "height": 60,
+                "id": "lCI31F",
+                "position": {
+                    "bottom": "auto",
+                    "left": 52,
+                    "right": "auto",
+                    "top": 78
+                },
+                "type": 1,
+                "width": 80
+            }
+        ],
+        "bgi": {
+            "height": 200,
+            "src": "https://meiqia-upload-qa.meiqiausercontent.com/widget/10/ysfc/FZbxH8QsNsMVlj6hhHNK.png",
+            "width": 200
+        }
+    },
+
+}
+
+*/
+
+type SmartGuideTemplate struct {
+	TemplateID string             `gorm:"column:template_id" json:"template_id"`
+	Target     string             `gorm:"column:target" json:"target"`
+	Settings   *SmartGuideSetting `gorm:"column:settings" json:"settings"`
+	Details    *SmartGuideDetail  `gorm:"column:details" json:"details"`
+	// Rank         float64            `gorm:"column:rank" json:"rank"`
+	// ManualStatus string             `gorm:"column:manual_status" json:"manual_status"`
+}
+
+func (t *SmartGuideTemplate) TableName() string {
+	return "enterprise_mpush_template"
+}
+
+// 这些字段只有在匹配的时候才有用，后续智能引导处理的过程中不需要，这里目的是保存redis是可以节省点空间
+func (t *SmartGuideTemplate) Trim() *SmartGuideTemplate {
+	t.Settings.PushBeginTime = ""
+	t.Settings.PushEndTime = ""
+	t.Settings.PushTime = ""
+	t.Settings.VisitorRules = nil
+	t.Settings.PushVisitorType = 0
+	t.Settings.WorkRule = 0
+
+	return t
+}
+
+type VisitorRule struct {
+	Name string `json:"name"`
+	Val  string `json:"val"`
+	Op   int8   `json:"op"`
+}
+
+// {"auto_status":"open","delay":4,"push_begin_time":"","push_end_time":"","push_time":"offline","push_visitor_type":1,"visitor_rules":[],"work_rule":1}
+type SmartGuideSetting struct {
+	AutoStatus      string        `json:"auto_status"` // 自动推送开启状态
+	Delay           int64         `json:"delay"`       // 访客访问网站delay秒后自动推送
+	PushBeginTime   string        `json:"push_begin_time,omitempty"`
+	PushEndTime     string        `json:"push_end_time,omitempty"`
+	PushTime        string        `json:"push_time,omitempty"` // 推送时间范围: all | online | offline | custom
+	VisitorRules    []VisitorRule `json:"visitor_rules,omitempty"`
+	PushVisitorType int8          `json:"push_visitor_type,omitempty"` // 推送访客类型: 1:全部 | 2:无线索访客 | 3:自定义规则
+	WorkRule        int8          `json:"work_rule,omitempty"`
+}
+
+func (s SmartGuideSetting) Value() (driver.Value, error) {
+	return json.Marshal(s)
+}
+
+func (s *SmartGuideSetting) Scan(v any) error {
+	switch data := v.(type) {
+	case []byte:
+		return json.Unmarshal(data, &s)
+	case string:
+		return json.Unmarshal([]byte(data), &s)
+	default:
+		return fmt.Errorf("invalid setting field data: %v", v)
+	}
+}
+
+type innerType struct {
+	Type      string `json:"type"`
+	Countdown int64  `json:"countdown,omitempty"`
+}
+
+type SmartGuideDetail struct {
+	AutoAutoBounde   innerType `json:"auto_auto_bounce"`
+	ManualAutoBounce innerType `json:"manual_auto_bounce"`
+	Type             string    `json:"type"`
+	GreetingsContent string    `json:"greetings_content"`
+	SenderID         int64     `json:"sender_id"`
+	GapSecond        int64     `json:"gap_second"`
+	ManualGapSecond  int64     `json:"manual_gap_second"`
+	GreetingsType    int8      `json:"greetings_type"`
+	ManualPushRate   int8      `json:"manual_push_rate"`
+	PushRate         int8      `json:"push_rate"`
+	GreetingsStyle   any       `json:"greetings_style"` // TODO(any OK)
+	// 下面4个字段以 settings 中的为准
+	// AutoStatus       string    `gorm:"column:auto_status"`
+	// Delay            int64     `gorm:"column:delay"`
+	// PushTime         string    `json:"push_time"`
+	// PushVisitorType int8  `json:"push_visitor_type"`
+}
+
+func (s SmartGuideDetail) Value() (driver.Value, error) {
+	return json.Marshal(s)
+}
+
+func (s *SmartGuideDetail) Scan(v any) error {
+	switch data := v.(type) {
+	case []byte:
+		return json.Unmarshal(data, &s)
+	case string:
+		return json.Unmarshal([]byte(data), &s)
+	default:
+		return fmt.Errorf("invalid detail field data: %v", v)
+	}
+}
+
+func demo22() {
+	entID := 10
+
+	var templates []SmartGuideTemplate
+	// err := db.Raw("SELECT template_id, target, `rank`, manual_status, created_at, settings, details FROM enterprise_mpush_template WHERE ent_id = ? AND template_status = 0 ORDER BY `rank`, `created_at`", entID).Scan(&templates).Error
+	// err := db.Model(&SmartGuideTemplate{}).Select("template_id", "target", "`rank`", "manual_status", "created_at", "settings", "details").
+	err := db.Model(&SmartGuideTemplate{}).Select("template_id", "target", "settings", "details").
+		Where("ent_id = ? AND template_status = 1", entID).
+		Find(&templates).Error
+	if err != nil {
+		log.Printf("err: %v\n", err)
+		return
+	}
+
+	for _, tpl := range templates {
+		bs, _ := json.Marshal(tpl)
+		fmt.Println(tpl.TemplateID, string(bs), "\n")
+	}
+
+	// log.Println(templates[0].Details.GreetingsStyle)
+	// dat := map[string]any{"name": "foo", "data": templates[0].Details.GreetingsStyle}
+	// bs, _ := json.Marshal(dat)
+	// log.Println(string(bs))
+	// log.Println(templates[1].TemplateID, templates[1].Settings.VisitorRules)
+}
+
+func demo33() {
+	var entIDs []int64
+	err := db.Raw("SELECT ent_id FROM feishu_account WHERE enabled = 2").Scan(&entIDs).Error
+	if err != nil {
+		panic(err)
+	}
+
+	set := make(map[int64]struct{}, len(entIDs))
+	for _, entID := range entIDs {
+		set[entID] = struct{}{}
+	}
+
+	log.Printf("set: %v\n", set)
+}
+
 func Main() {
-	demo21()
+	demo33()
 }

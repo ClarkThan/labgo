@@ -3,6 +3,7 @@ package fileup
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +22,7 @@ type FileInfo struct {
 	Filename      string
 	ContentType   string
 	ContentLength int64
+	Link          string
 }
 
 func UploadByURL(ctx context.Context, fileURL, fileType string, params map[string]string) (info *FileInfo, err error) {
@@ -90,15 +92,48 @@ func UploadByURL(ctx context.Context, fileURL, fileType string, params map[strin
 		log.Fatalf("read upload resp fail: %v\n", err)
 	}
 
+	/*
+			{
+		    "success": true,
+		    "status": 200,
+		    "id": "ba4072d0-602f-11ef-8f04-dd5fa071332c",
+		    "key": "3qPPi6iYNzpo",
+		    "path": "/",
+		    "nodeType": "file",
+		    "name": "rpSjWSDDlCWaefl3.mp4",
+		    "title": "rpSjWSDDlCWaefl3.mp4",
+		    "description": null,
+		    "size": 248745,
+		    "link": "https://file.io/3qPPi6iYNzpo",
+		    "private": false,
+		    "expires": "2024-09-05T02:39:17.618Z",
+		    "downloads": 0,
+		    "maxDownloads": 1,
+		    "autoDelete": true,
+		    "planId": 0,
+		    "screeningStatus": "pending",
+		    "mimeType": "application/octet-stream",
+		    "created": "2024-08-22T02:39:17.618Z",
+		    "modified": "2024-08-22T02:39:17.618Z"
+		}
+	*/
+
 	log.Println("upload resp:", string(bodyData))
 	for k, v := range resp.Header {
-		log.Printf("%s = %v\n", k, v)
+		fmt.Printf("%s = %v\n", k, v)
 	}
+
+	var result struct {
+		Link string `json:"link"`
+		Size int    `json:"size"`
+	}
+	_ = json.Unmarshal(bodyData, &result)
 
 	info = &FileInfo{
 		Filename:      fileName,
 		ContentLength: downResp.ContentLength,
 		ContentType:   downResp.Header.Get("content-type"),
+		Link:          result.Link,
 	}
 
 	return
@@ -106,10 +141,13 @@ func UploadByURL(ctx context.Context, fileURL, fileType string, params map[strin
 
 func demo1() {
 	fileURL := "https://omni-wechat-qa.oss-cn-zhangjiakou.aliyuncs.com/wechat/wxkf/7/wpsduZdQAArDHqPXNhkVZ-03W8uAY87w/wksduZdQAAQeGArm-Q76QSCrHj3orZCw/rpSjWSDDlCWaefl3.mp4"
-	_, err := UploadByURL(context.Background(), fileURL, "video", nil)
+	info, err := UploadByURL(context.Background(), fileURL, "video", nil)
 	if err != nil {
 		log.Printf("UploadByURL err: %v\n", err)
+		return
 	}
+
+	log.Println(info)
 }
 
 func Main() {

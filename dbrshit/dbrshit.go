@@ -16,6 +16,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cmp/cmp"
+	"github.com/mitchellh/mapstructure"
 	"github.com/timonwong/dbr"
 	"github.com/timonwong/dbr/dialect"
 )
@@ -344,9 +345,15 @@ func demo5() {
 }
 
 func demo6() {
-	var provider string
-	conds := dbr.And(dbr.Eq("robot_id", 1849587), dbr.Eq("status", 1))
-	_, err := sess.Select("provider").From("gptbot_membership").Where(conds).LoadContext(ctx, &provider)
+	// var provider string
+
+	type Info struct {
+		RobotID  int64  `db:"robot_id"`
+		Provider string `db:"provider"`
+	}
+
+	var info Info
+	_, err := sess.Select("provider,robot_id").From("robot_membership").Where(dbr.Gt("robot_id", 35)).LoadContext(ctx, &info)
 	if err != nil {
 		// dead code, LoadContext 不会返回 ErrNotFound
 		if errors.Is(err, dbr.ErrNotFound) {
@@ -355,7 +362,7 @@ func demo6() {
 		}
 		log.Fatalf("query provider from gptbot_membership failed: %v\n", err)
 	}
-	log.Println("provider = ", provider)
+	log.Println("provider = ", info)
 }
 
 func demo7() {
@@ -468,7 +475,18 @@ func (m *M) ToMap() map[string]any {
 	return ret
 }
 
-func Main() {
+func orEmptyList(val any) any {
+	// if !reflect.ValueOf(val).IsNil() {
+	// 	return val
+	// }
+	if lst, ok := val.([]any); ok && len(lst) > 0 {
+		return lst
+	}
+
+	return []any{}
+}
+
+func demo12() {
 	// demo11()
 	// m := map[string]any{
 	// 	"name":    "air",
@@ -526,13 +544,68 @@ func Main() {
 	log.Println("json:", string(retStr))
 }
 
-func orEmptyList(val any) any {
-	// if !reflect.ValueOf(val).IsNil() {
-	// 	return val
-	// }
-	if lst, ok := val.([]any); ok && len(lst) > 0 {
-		return lst
+func demo13() {
+	var maxRank int64
+	err := sess.Select("MAX(`rank`)").
+		From("selecting_rule").
+		Where("enterprise_id = ?", 10).
+		LoadOneContext(ctx, &maxRank)
+
+	if err != nil {
+		log.Printf("err: %v\n", err)
 	}
 
-	return []any{}
+	log.Println("maxRank", maxRank)
+}
+
+type Event struct {
+	ID           int64 `json:"id" mapstructure:"id"`
+	EnterpriseID int64 `json:"enterprise_id" mapstructure:"enterprise_id"`
+	TicketID     int64 `json:"ticket_id" mapstructure:"ticket_id"`
+	AgentID      int64 `json:"agent_id" mapstructure:"agent_id"`
+
+	Content     string `json:"content" mapstructure:"content"`
+	ContentType string `json:"content_type" mapstructure:"content_type"`
+	Type        string `json:"type" mapstructure:"type"`
+	Action      string `json:"action" mapstructure:"action"`
+	FromType    string `json:"from_type" mapstructure:"from_type"`
+
+	CreatedAt time.Time `json:"created_at" mapstructure:"created_at,asis"`
+	UpdatedAt time.Time `json:"updated_at" mapstructure:"updated_at,asis"`
+}
+
+type AgentAvatar struct {
+	Avatar string `json:"avatar"`
+}
+
+type Reply struct {
+	*Event
+
+	MediaURL string       `json:"media_url,omitempty" mapstructure:"media_url"`
+	Agent    *AgentAvatar `json:"agent,omitempty" mapstructure:"agent"`
+}
+
+func demo14() {
+	evt := Reply{
+		Event: &Event{
+			ID:          134,
+			AgentID:     345,
+			ContentType: "hello",
+		},
+		MediaURL: "http://meiqia.com",
+	}
+
+	var e any = evt
+	data := make(map[string]any)
+	if err := mapstructure.Decode(e, &data); err != nil {
+		log.Printf("err: %v\n", err)
+	}
+
+	bs, _ := json.Marshal(data)
+
+	log.Println(string(bs))
+}
+
+func Main() {
+	demo14()
 }

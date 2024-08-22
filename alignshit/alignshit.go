@@ -14,5 +14,5 @@ type TimeSpec struct {
 
 func Main() {
 	var t TimeSpec
-	fmt.Println(unsafe.Sizeof(t))
+	fmt.Println(unsafe.Sizeof(t)) // 16 * 3 + 24
 }
