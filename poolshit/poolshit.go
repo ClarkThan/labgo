@@ -20,6 +20,9 @@ type GoPool struct {
 	closed  chan struct{}
 }
 
+// 参考
+// https://learnku.com/articles/23560/using-golang-to-achieve-million-level-websocket-services#c9f158
+// https://www.freecodecamp.org/news/million-websockets-and-go-cc58418460bb
 func NewGoPool(size int) *GoPool {
 	p := &GoPool{
 		jobChan: make(chan func()),
