@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"reflect"
 	"runtime"
+	"strings"
 	"unsafe"
 
 	"github.com/minio/sha256-simd"
@@ -136,3 +137,9 @@ func Verify(passwd, dbPwd, dbSalt string) error {
 }
 
 // Verify("12345678A", "9cbd66f282f4b7347bc065d26cb3ac6ba7756d14bd570db9a2dbc14db92d2e06", "d74f1e50fb8c63fbc67cd1a47cdfd38c")
+
+func GoID() string {
+	var buf [64]byte
+	n := runtime.Stack(buf[:], false)
+	return strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+}

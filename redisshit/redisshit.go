@@ -7,9 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	// "github.com/redis/go-redis/v9"
@@ -1013,12 +1011,6 @@ func demo27() {
 		log.Fatalf("got err: %v\n", err)
 	}
 	log.Println("got ->", lastMaxID)
-}
-
-func GoID() string {
-	var buf [64]byte
-	n := runtime.Stack(buf[:], false)
-	return strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
 }
 
 func Main() {
