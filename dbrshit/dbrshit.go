@@ -606,6 +606,19 @@ func demo14() {
 	log.Println(string(bs))
 }
 
+type TicketConf struct {
+	SDKEnabled bool `json:"sdk_enabled"`
+	WebEnabled bool `json:"web_enabled"`
+}
+
+func demo15() {
+	cfg := TicketConf{true, true}
+	// dat := []byte(`{"addresser_name":"","captcha":"close","category":"close","contactRule":"multi","content_fill_type":"placeholder","content_placeholder":"留言遇到的问题和图片","content_title":"留言内容（请具体描述您所遇到的问题，并上传产品和快递面单照片，以及留言您希望的处理方式）","custom_fields":[{"metainfo":[],"name":"tel","placeholder":"请确保您的联系方式准确无误。","required":true,"type":"string"}],"defaultTemplate":"open","email":"close","intro":"亲爱的达漫会员：您好，客服当前不在线，请留言您遇到的具体问题+订单编号以及您的联系方式。\n      人工客服在线时间：08:30-17:30，其余时间人工客服不在线，如有问题可致电4001580008，电话客服服务时间：08:30-21:00。非服务时间（当日17:30至次日8:30）客服将会在次日上班后依次处理，如您着急，请在服务时间内拨打400电话向客服反馈。\n\n自助售后流程： 进入“达漫电商”微信公众号-达漫商城-我的-我的订单-找到对应订单确认收货后即可申请售后（上传问题图片处理更快哦~）","name":"close","permission":"close","qq":"close","tel":"open","upload_image":"open","wechat":"close"}	`)
+	var settings any = nil
+	err := mapstructure.Decode(settings, &cfg)
+	fmt.Printf("%#v\n,  %v", cfg, err)
+}
+
 func Main() {
-	demo14()
+	demo15()
 }
