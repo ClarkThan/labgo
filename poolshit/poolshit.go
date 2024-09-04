@@ -68,7 +68,7 @@ func (p *GoPool) Stop() {
 	close(p.closed)
 }
 
-func Main() {
+func demo1() {
 	p := NewGoPool(5)
 	go func() {
 		for i := 0; i < 25; i++ {
@@ -84,4 +84,8 @@ func Main() {
 	time.Sleep(400 * time.Millisecond)
 	fmt.Println("-----over-----")
 	p.Stop()
+}
+
+func Main() {
+	demo_lru2()
 }

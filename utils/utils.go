@@ -143,3 +143,11 @@ func GoID() string {
 	n := runtime.Stack(buf[:], false)
 	return strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
 }
+
+func TraceMemStats() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// fmt.Printf("stats: %#v\n", m)
+	fmt.Printf("Alloc = %v HeapAlloc = %v TotalAlloc = %v Sys = %v NumGC = %v\n",
+		m.Alloc/1024/1024, m.HeapAlloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+}
