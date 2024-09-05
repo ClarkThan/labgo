@@ -87,5 +87,5 @@ func demo1() {
 }
 
 func Main() {
-	demo_lru2()
+	demo_lru3()
 }

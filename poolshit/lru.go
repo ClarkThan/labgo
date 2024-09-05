@@ -77,13 +77,33 @@ func demo_lru2() {
 
 func demo_lru3() {
 	utils.TraceMemStats()
-	l, _ := lru.New[string, bool](1 << 17)
+	l, _ := lru.New[string, bool](1 << 18)
 	utils.TraceMemStats()
-	for i := 0; i < 1<<17; i++ {
-		l.Add(hex.EncodeToString(md5.New().Sum(utils.String2Bytes(strconv.Itoa(i+100)))), true)
+	for i := 0; i < 1<<18; i++ {
+		l.Add(genMD5(strconv.Itoa(i+100)), true)
 	}
 	runtime.GC()
 	time.Sleep(time.Second)
 	utils.TraceMemStats()
 	fmt.Println("keys:", l.Len())
+}
+
+func demo_lru4() {
+	o := md5.New().Sum(utils.String2Bytes("1111"))
+	x := hex.EncodeToString(o[:16])
+	fmt.Println(x)
+
+	y := hex.EncodeToString(md5.New().Sum([]byte("1111sddwewvfxxxxxxxxxxx"))[:16])
+	fmt.Println(y)
+
+	h := md5.New()
+	h.Write([]byte("1111sddwewvfxxxxxxxxxxx"))
+	ret := h.Sum(nil)
+	fmt.Println(hex.EncodeToString(ret))
+}
+
+func genMD5(data string) string {
+	h := md5.New()
+	h.Write(utils.String2Bytes(data))
+	return hex.EncodeToString(h.Sum(nil))
 }

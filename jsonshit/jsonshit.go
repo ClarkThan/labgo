@@ -1850,6 +1850,34 @@ func demo1() {
 	log.Println(string(dat))
 }
 
+type Inner struct {
+	Addr string `json:"addr"`
+	Type string `json:"type"`
+}
+
+type Outer struct {
+	Name string `json:"name"`
+	Age  int    `json:"aget"`
+	Inner
+}
+
+func demo2() {
+	o := Outer{
+		Inner: Inner{
+			Type: "nba",
+			Addr: "USA",
+		},
+	}
+	o.Name = "air"
+	o.Age = 23
+	dat, err := json.Marshal(&o)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(string(dat))
+}
+
 func Main() {
-	demo1()
+	demo2()
 }
