@@ -4,16 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
-	"net"
+	"math/rand"
 	"reflect"
+	"sync"
 	"time"
 
-	// "github.com/ClickHouse/clickhouse-go/v2"
-	// "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	_ "github.com/ClickHouse/clickhouse-go"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -21,17 +22,13 @@ const (
 	USERNAME = "meiqia"
 	PASSWORD = "cmKInlS9W6YwjEiz"
 	DSN      = "tcp://cc-8vbwcevpifh6o038y.clickhouse.ads.aliyuncs.com:3306?compress=true&username=meiqia&password=cmKInlS9W6YwjEiz"
+	// PRD      = "tcp://cc-8vb5j516ra1re2uh7.clickhouse.ads.aliyuncs.com:3306?compress=true&username=salesadmin&password=q9K3gHbBGYkliEpD"
 )
 
 var (
 	click *sqlx.DB
-	// sqlDB *sql.DB
+	// clickDB *sqlx.DB
 	ctx = context.Background()
-	// conn  driver.Conn
-
-	dailer = &net.Dialer{
-		Timeout: 3 * time.Second,
-	}
 )
 
 func init() {
@@ -43,114 +40,21 @@ func init() {
 		log.Fatalf("ping failed: %v\n", err)
 	}
 
+	sqlxDB.SetMaxIdleConns(30)
+	sqlxDB.SetMaxOpenConns(72)
+	sqlxDB.SetConnMaxLifetime(290 * time.Second)
 	click = sqlxDB
+
+	// clickDB, err = sqlx.Open("clickhouse", PRD)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// if err := clickDB.Ping(); err != nil {
+	// 	log.Fatalf("ping prod failed: %v\n", err)
+	// }
 }
 
-// func init() {
-// 	c, err := clickhouse.Open(&clickhouse.Options{
-// 		Addr: []string{ADDR},
-// 		Auth: clickhouse.Auth{
-// 			Database: "report",
-// 			Username: USERNAME,
-// 			Password: PASSWORD,
-// 		},
-// 		DialContext: func(ctx context.Context, addr string) (net.Conn, error) {
-// 			return dailer.DialContext(ctx, "tcp", addr)
-// 		},
-// 		Debug: false,
-// 		// Debugf: func(format string, v ...any) {
-// 		// 	fmt.Printf(format+"\n", v...)
-// 		// },
-// 		Settings: clickhouse.Settings{
-// 			"max_execution_time": 60,
-// 		},
-// 		Compression: &clickhouse.Compression{
-// 			Method: clickhouse.CompressionLZ4,
-// 		},
-// 		DialTimeout:          time.Second * 30,
-// 		MaxOpenConns:         5,
-// 		MaxIdleConns:         5,
-// 		ConnMaxLifetime:      time.Duration(10) * time.Minute,
-// 		ConnOpenStrategy:     clickhouse.ConnOpenInOrder,
-// 		BlockBufferSize:      10,
-// 		MaxCompressionBuffer: 10240,
-// 		ClientInfo: clickhouse.ClientInfo{ // optional, please see Client info section in the README.md
-// 			Products: []struct {
-// 				Name    string
-// 				Version string
-// 			}{
-// 				{Name: "my-app", Version: "0.1"},
-// 			},
-// 		},
-// 	})
-// 	if err != nil {
-// 		log.Fatalf("damn1: %v\n", err)
-// 	}
-
-// 	if err := c.Ping(context.Background()); err != nil {
-// 		log.Fatalf("damn2: %v\n", err)
-// 	}
-
-// 	conn = c
-// }
-
-// func init() {
-// 	op, err := clickhouse.ParseDSN(DSN)
-// 	if err != nil {
-// 		log.Fatalf("parse dsn fail: %v\n", err)
-// 	}
-
-// 	sqlDB = clickhouse.OpenDB(&clickhouse.Options{
-// 		Addr: op.Addr,
-// 		Auth: clickhouse.Auth{
-// 			Database: "report",
-// 			Username: op.Auth.Username,
-// 			Password: op.Auth.Password,
-// 		},
-// 		Settings: clickhouse.Settings{
-// 			"max_execution_time": 60,
-// 			"send_logs_level":    "trace",
-// 		},
-// 		DialTimeout: time.Second * 30,
-// 		DialContext: func(ctx context.Context, addr string) (net.Conn, error) {
-// 			var d net.Dialer
-// 			return d.DialContext(ctx, "tcp", addr)
-// 			// return dailer.DialContext(ctx, "tcp", addr)
-// 		},
-// 		Compression: &clickhouse.Compression{
-// 			Method: clickhouse.CompressionLZ4,
-// 		},
-// 		Debug:                false,
-// 		Protocol:             clickhouse.Native,
-// 		BlockBufferSize:      10,
-// 		MaxCompressionBuffer: 10240,
-// 		// ConnMaxLifetime:      time.Duration(10) * time.Minute,
-// 		ConnOpenStrategy: clickhouse.ConnOpenInOrder,
-// 		ClientInfo: clickhouse.ClientInfo{ // optional, please see Client info section in the README.md
-// 			Products: []struct {
-// 				Name    string
-// 				Version string
-// 			}{
-// 				{Name: "hikari-report", Version: "0.1"},
-// 			},
-// 		},
-// 	})
-// 	sqlDB.SetMaxIdleConns(5)
-// 	sqlDB.SetMaxOpenConns(10)
-// 	sqlDB.SetConnMaxLifetime(time.Hour)
-
-//		ctx := clickhouse.Context(context.Background(), clickhouse.WithSettings(clickhouse.Settings{
-//			"max_block_size": 10,
-//		}), clickhouse.WithProgress(func(p *clickhouse.Progress) {
-//			fmt.Println("progress: ", p)
-//		}))
-//		if err := sqlDB.PingContext(ctx); err != nil {
-//			if exception, ok := err.(*clickhouse.Exception); ok {
-//				fmt.Printf("Catch exception [%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
-//			}
-//			log.Fatalf("ping fail: %v\n", err)
-//		}
-//	}
 func clickhouseTime(t time.Time) string {
 	return t.Format(`2006-01-02T15:04:05.999999`)
 }
@@ -329,205 +233,44 @@ func isEmptySlice(a any) bool {
 }
 
 // 更推荐 demo1_2
-// func demo2() {
-// 	conn, err := click.Conn(ctx)
-// 	if conn != nil {
-// 		defer conn.Close()
-// 	}
-// 	if err != nil {
-// 		log.Fatalf("conn err: %v\n", err)
-// 	}
+func demo2() {
+	conn, err := click.Conn(ctx)
+	if conn != nil {
+		defer conn.Close()
+	}
+	if err != nil {
+		log.Fatalf("conn err: %v\n", err)
+	}
 
-// 	var entID int64 = 10
-// 	trafficType := 1
-// 	visitID := "2dG4t5KoIL9tMFkL9zT8eLger53"
-// 	createdTS := `2024-03-05T04:00:00`
+	var entID int64 = 10
+	trafficType := 1
+	visitID := "2dG4t5KoIL9tMFkL9zT8eLger53"
+	createdTS := `2024-03-05T04:00:00`
 
-// 	sql := `
-// 		SELECT * FROM report.visit_conv_distributed
-// 		WHERE ent_id = ? AND traffic_type = ? AND visit_id = ? AND sign = 1 and created_on >= toDateTime64(?, 6)
-// 		ORDER BY version DESC
-// 		LIMIT 1
-// 	`
+	sql := `
+		SELECT * FROM report.visit_conv_distributed
+		WHERE ent_id = ? AND traffic_type = ? AND visit_id = ? AND sign = 1 and created_on >= toDateTime64(?, 6)
+		ORDER BY version DESC
+		LIMIT 1
+	`
 
-// 	rows, err := conn.QueryContext(ctx, sql, entID, trafficType, visitID, createdTS)
-// 	if rows != nil {
-// 		defer rows.Close()
-// 	}
-// 	if err != nil {
-// 		log.Fatalf("query rows err: %v\n", err)
-// 	}
+	rows, err := conn.QueryContext(ctx, sql, entID, trafficType, visitID, createdTS)
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		log.Fatalf("query rows err: %v\n", err)
+	}
 
-// 	ds, err := SQLRowsToMap(rows)
-// 	if err != nil {
-// 		log.Fatalf("query data fail: %v\n", err)
-// 	}
+	ds, err := SQLRowsToMap(rows)
+	if err != nil {
+		log.Fatalf("query data fail: %v\n", err)
+	}
 
-// 	if len(ds) > 0 {
-// 		log.Printf("get %+v\n", ds[0])
-// 	}
-// }
-
-// func demo3() {
-// 	var entID int64 = 10
-// 	trafficType := 1
-// 	visitID := "2dG4t5KoIL9tMFkL9zT8eLger53"
-// 	createdTS := `2024-03-05T04:00:00`
-
-// 	sql := `
-// 		SELECT conv_id, agent_type FROM report.visit_conv_distributed
-// 		WHERE ent_id = ? AND traffic_type = ? AND visit_id = ? AND sign = 1 and created_on >= toDateTime64(?, 6)
-// 		ORDER BY version DESC
-// 		LIMIT 1
-// 	`
-// 	ctx := clickhouse.Context(
-// 		context.Background(),
-// 		clickhouse.WithSettings(clickhouse.Settings{"max_block_size": 2}),
-// 		clickhouse.WithProgress(func(p *clickhouse.Progress) { fmt.Println("----> ", p) }),
-// 	)
-// 	rows, err := conn.Query(ctx, sql, entID, trafficType, visitID, createdTS)
-// 	defer conn.Close()
-// 	if err != nil {
-// 		log.Fatalf("query rows err: %v\n", err)
-// 	}
-// 	defer rows.Close()
-
-// 	data, err := DriverRows2Map(rows)
-// 	if err != nil {
-// 		log.Fatalf("translate driver rows fail: %v\n", err)
-// 	}
-// 	if len(data) > 0 {
-// 		log.Printf("get: %v\n", len(data[0]))
-// 	}
-
-// 	var sts []struct {
-// 		ConvID    uint64 `ch:"conv_id"`
-// 		AgentType uint8  `ch:"agent_type"`
-// 	}
-
-// 	if err := conn.Select(ctx, &sts, sql, entID, trafficType, visitID, createdTS); err != nil {
-// 		log.Fatalf("select failed: %v\n", err)
-// 	}
-
-// 	log.Printf("st: %v\n", sts)
-// }
-
-// func DriverRows2Map(rows driver.Rows) (ds []map[string]any, err error) {
-// 	columns := rows.Columns()
-// 	if len(columns) == 0 {
-// 		return
-// 	}
-// 	columnTypes := rows.ColumnTypes()
-
-// 	for rows.Next() {
-// 		values := make([]any, len(columns))
-// 		for i := range values {
-// 			values[i] = reflect.New(columnTypes[i].ScanType()).Interface()
-// 		}
-// 		if err := rows.Scan(values...); err != nil {
-// 			return nil, fmt.Errorf("scan row data: %w", err)
-// 		}
-
-// 		row := make(map[string]any, len(columns))
-// 		for i, column := range columns {
-// 			if values[i] == nil {
-// 				continue
-// 			}
-// 			row[column] = t(values[i])
-// 		}
-// 		ds = append(ds, row)
-// 	}
-
-// 	if err := rows.Err(); err != nil {
-// 		return nil, fmt.Errorf("rows last check: %w", err)
-// 	}
-
-// 	return
-// }
-
-// func t(v any) any {
-// 	switch val := v.(type) {
-// 	case *int8:
-// 		return *val
-// 	case *int16:
-// 		return *val
-// 	case *int32:
-// 		return *val
-// 	case *int64:
-// 		return *val
-// 	case *uint8:
-// 		return *val
-// 	case *uint16:
-// 		return *val
-// 	case *uint32:
-// 		return *val
-// 	case *uint64:
-// 		return *val
-// 	case *string:
-// 		return *val
-// 	case *time.Time:
-// 		return *val
-// 	case *[]int8:
-// 		return *val
-// 	case *[]int16:
-// 		return *val
-// 	case *[]int32:
-// 		return *val
-// 	case *[]int64:
-// 		return *val
-// 	case *[]uint8:
-// 		return *val
-// 	case *[]uint16:
-// 		return *val
-// 	case *[]uint32:
-// 		return *val
-// 	case *[]uint64:
-// 		return *val
-// 	case *[]string:
-// 		return *val
-// 	case *[]time.Time:
-// 		return *val
-// 	default:
-// 		return v
-// 	}
-// }
-
-// func demo4() {
-// 	var entID int64 = 10
-// 	trafficType := 1
-// 	visitID := "2dG4t5KoIL9tMFkL9zT8eLger53"
-// 	createdTS := `2024-03-05T04:00:00`
-// 	// 占位符用 ？ 和 $1 都可以
-// 	sql := `
-// 		SELECT * FROM report.visit_conv_distributed
-// 		WHERE ent_id = $1 AND traffic_type = $2 AND visit_id = $3 AND sign = 1 and created_on >= toDateTime64($4, 6)
-// 		ORDER BY version DESC
-// 		LIMIT 1
-// 	`
-
-// 	ctx := clickhouse.Context(
-// 		context.Background(),
-// 		clickhouse.WithSettings(clickhouse.Settings{"max_block_size": 2}),
-// 		clickhouse.WithProgress(func(p *clickhouse.Progress) { fmt.Println("----> ", p) }),
-// 		clickhouse.WithProfileInfo(func(p *clickhouse.ProfileInfo) { fmt.Println("profile info: ", p) }),
-// 		// clickhouse.WithLogs(func(log *clickhouse.Log) { fmt.Println("log info: ", log) }),
-// 	)
-
-// 	rows, err := sqlDB.QueryContext(ctx, sql, entID, trafficType, visitID, createdTS)
-// 	if err != nil {
-// 		log.Fatalf("query rows err: %v\n", err)
-// 	}
-// 	defer rows.Close()
-
-// 	data, err := SQLRowsToMap(rows)
-// 	if err != nil {
-// 		log.Fatalf("translate fail: %v\n", err)
-// 	}
-
-// 	if len(data) > 0 {
-// 		log.Printf("get: %v\n", len(data[0]))
-// 	}
-// }
+	if len(ds) > 0 {
+		log.Printf("get %+v\n", ds[0])
+	}
+}
 
 func SQLRowsToMap(rows *sql.Rows) (ds []map[string]any, err error) {
 	// 获取列名
@@ -580,8 +323,82 @@ func (m *MM) IsOk() bool {
 	return m != nil && len(m.Name) > 2
 }
 
+type RepoOverview4evaluateResp struct {
+	GoodEvalNum   int64 `db:"good_eval_num"`   // 好评数
+	MedEvalNum    int64 `db:"med_eval_num"`    // 中评数
+	BadEvalNum    int64 `db:"bad_eval_num"`    // 差评数
+	InviteEvalNum int64 `db:"invite_eval_num"` // 邀请评价数
+	ConvNum       int64 `db:"conv_num"`        // 对话数
+}
+
+func demo7() {
+	sqlStmt := `SELECT sum(visit_conv_distributed.is_good_conv * visit_conv_distributed.sign) AS good_eval_num,
+sum(visit_conv_distributed.is_medium_conv * visit_conv_distributed.sign) AS med_eval_num,
+sum(visit_conv_distributed.is_bad_conv * visit_conv_distributed.sign) AS bad_eval_num,
+sum(visit_conv_distributed.is_invite_evaluate * visit_conv_distributed.sign) AS invite_eval_num,
+sum(visit_conv_distributed.is_new_conv * visit_conv_distributed.sign) AS conv_num
+FROM report.visit_conv_distributed WHERE visit_conv_distributed.ent_id = 10 
+AND visit_conv_distributed.conv_created_on >= toDateTime64('2024-09-01T02:00:00',6) 
+AND visit_conv_distributed.conv_created_on < toDateTime64('2024-09-04T03:05:00',6) 
+AND visit_conv_distributed.is_effective = 1  
+HAVING sum(sign) > 0`
+
+	// AND visit_conv_distributed.agent_id in (2090324,1953238,1964086,1969204,1980508,1980510,1980978,1997510,2005766)
+
+	var resp RepoOverview4evaluateResp
+
+	err := click.GetContext(ctx, &resp, sqlStmt)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Fatalf("overview evaluate sql: %s -> %v", sqlStmt, err)
+	}
+
+	fmt.Println(resp)
+}
+
+func demo8() {
+	g := new(singleflight.Group)
+	for i := 0; i < 2; i++ {
+		_, _, shared := g.Do("demo7", func() (any, error) {
+			demo7()
+			return nil, nil
+		})
+		fmt.Println(shared)
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 200; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 2; j++ {
+				label := "demo7"
+				_, _, shared := g.Do(label, func() (any, error) {
+					demo7()
+					return nil, nil
+				})
+				fmt.Println(label, shared)
+			}
+		}()
+	}
+	wg.Wait()
+	fmt.Println("concurrent process end")
+}
+
 func Main() {
-	var m *MM
-	log.Println(m.IsOk())
-	demo1_2()
+	// var m *MM
+	// log.Println(m.IsOk())
+	// demo1_2()
+	var wg sync.WaitGroup
+	for i := 0; i < 120; i++ {
+		wg.Add(1)
+		go func() {
+			random := rand.New(rand.NewSource(time.Now().UnixNano()))
+			defer wg.Done()
+			for i := 0; i < 200; i++ {
+				demo7()
+				time.Sleep(time.Duration(random.Int31n(300)) * time.Millisecond)
+			}
+		}()
+	}
+	wg.Wait()
+	fmt.Println("concurrent process end")
 }

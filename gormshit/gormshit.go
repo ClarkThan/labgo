@@ -949,6 +949,15 @@ func demo33() {
 	log.Printf("set: %v\n", set)
 }
 
+func demo34() {
+	var exists bool
+	// var exists int
+	if err := db.Model(&Membership{}).Select("count(*) > 0").Where("robot_id = ?", 61).First(&exists).Error; err != nil {
+		log.Fatalf("query robot_membership error: %v\n", err)
+	}
+	fmt.Println(exists)
+}
+
 func Main() {
-	demo33()
+	demo34()
 }

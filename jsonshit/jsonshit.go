@@ -4,8 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/ClarkThan/labgo/utils"
+	"github.com/buger/jsonparser"
+	"github.com/segmentio/ksuid"
+	"github.com/tidwall/gjson"
+	"github.com/valyala/fastjson"
 )
 
 var data = []byte(`{
@@ -1878,6 +1883,32 @@ func demo2() {
 	fmt.Println(string(dat))
 }
 
+func demo3() {
+	trackID := ksuid.New().String()
+	n := time.Now()
+	fmt.Println(trackID)
+	kid, err := ksuid.Parse(trackID)
+	if err != nil {
+		fmt.Println("damn: ", err)
+		return
+	}
+
+	fmt.Println(kid.Time().Before(n))
+	// fmt.Println(n)
+}
+
+func demo4() {
+	dat := []byte(`{"id":"2625ec49-2ae1-4613-8bc0-567fe4a67d2f","source":"mpush-robot","spec_version":"1.0","time":1726655054,"type":"mbot_delay_fired","data":{"ent_id":347448,"conv_id":6708932490,"agent_id":2058788,"action":"silent_asking"}}`)
+	convID1 := fastjson.GetInt(dat, "data", "conv_id")
+	fmt.Println(convID1)
+
+	convID2, err := jsonparser.GetInt(dat, "data", "conv_id")
+	fmt.Println(convID2, err)
+
+	value := gjson.Get(string(dat), "data.conv_id")
+	println(value.String())
+}
+
 func Main() {
-	demo2()
+	demo4()
 }

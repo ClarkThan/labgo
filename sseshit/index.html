@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+
+<body>
+    <ul id="list"></ul>
+</body>
+
+<script type="text/javascript">
+    const eventSrc = new EventSource("http://127.0.0.1:8080/events");
+
+    const list = document.getElementById("list");
+
+    eventSrc.onmessage = (event) => {
+        const li = document.createElement("li");
+        li.textContent = `message: ${event.data}`;
+
+        list.appendChild(li);
+    };
+
+    eventSrc.onerror = (err) => {
+        console.error("damn EventSource failed:", err);
+    };
+</script>
+
+</html>
