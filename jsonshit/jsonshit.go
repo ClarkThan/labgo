@@ -8,6 +8,7 @@ import (
 
 	"github.com/ClarkThan/labgo/utils"
 	"github.com/buger/jsonparser"
+	"github.com/bytedance/sonic"
 	"github.com/segmentio/ksuid"
 	"github.com/tidwall/gjson"
 	"github.com/valyala/fastjson"
@@ -1909,6 +1910,23 @@ func demo4() {
 	println(value.String())
 }
 
+func demo5() {
+	m1 := make(map[string]any)
+	s := `{"id":"2625ec49-2ae1-4613-8bc0-567fe4a67d2f","source":"mpush-robot","spec_version":"1.0","time":1726655054,"type":"mbot_delay_fired","data":{"ent_id":347448,"conv_id":6708932490,"agent_id":2058788,"action":"silent_asking"}}`
+	if err := sonic.UnmarshalString(s, &m1); err != nil {
+		log.Println("sonic 1 fail", err)
+		return
+	}
+	fmt.Println(m1)
+
+	m2 := make(map[string]any)
+	if err := sonic.Unmarshal(utils.String2Bytes(s), &m2); err != nil {
+		log.Println("sonic 2 fail", err)
+		return
+	}
+	fmt.Println(m2)
+}
+
 func Main() {
-	demo4()
+	demo5()
 }
