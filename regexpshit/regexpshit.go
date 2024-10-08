@@ -15,10 +15,13 @@ var (
 	MetaRegexExtractor = regexp2.MustCompile(`(\/)?(?<pattern>.*)(?(1)\/)(?<flags>[gismuy]*)`, 0)
 	SerialNORegex      = regexp.MustCompile(`\d+`)
 	// PhoneRegex         = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{9})(?!\d)`, 0)
-	PhoneRegex   = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3})(?!\d)|(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4})(?!\d)`, 0)
-	mobileRegexp = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3})(?!\d)|(?<!\d)(1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4})(?!\d)`, 0)
-	reTel        = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4}|0(?:\d{2}-\d{8}|\d{3}-\d{7})|\d{3}-\d{3}-\d{4})(?!\d)`, 0)
-	reBadTel     = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{2,4}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{3,5})(?!\d)`, 0)
+	PhoneRegex    = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3})(?!\d)|(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4})(?!\d)`, 0)
+	mobileRegexp  = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3})(?!\d)|(?<!\d)(1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4})(?!\d)`, 0)
+	mobileRegexp1 = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}(?<sep>[ -]?)\d{4}\<sep>\d{3})(?!\d)|(?<!\d)(1[3|4|5|6|7|8|9]\d{1}(?<sep>[ -]?)\d{4}\<sep>\d{4})(?!\d)`, 0)
+	mobileRegexp2 = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{2}(?<sep>[ -]?)?\d{4}\<sep>\d{3})(?!\d)|(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{1}(?<sep>[ -]?)\d{4}\<sep>\d{4})(?!\d)`, 0)
+	reTel         = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4}|0(?:\d{2}-\d{8}|\d{3}-\d{7})|\d{3}-\d{3}-\d{4})(?!\d)`, 0)
+	reBadTel      = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{2,4}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{3,5})(?!\d)`, 0)
+	reSep         = regexp.MustCompile(`[ -]`)
 )
 
 func demo1() {
@@ -143,13 +146,50 @@ func regexp2FindAllString(re *regexp2.Regexp, s string) []string {
 	return matches
 }
 
+func extractPhoneByGroup(s string) string {
+	matched, err := mobileRegexp2.FindStringMatch(s)
+	if err != nil || matched == nil {
+		return ""
+	}
+
+	phone := matched.GroupByName("phone").Capture.String()
+	return reSep.ReplaceAllString(phone, "")
+}
+
 func demo6() {
 	vals := regexp2FindAllString(mobileRegexp, "191 8225 5030")
+	fmt.Println(vals)
+	vals = regexp2FindAllString(mobileRegexp1, "191-8225-5030")
+	fmt.Println(vals)
+	vals = regexp2FindAllString(mobileRegexp1, "1918-2255-030")
+	fmt.Println(vals)
+	vals = regexp2FindAllString(mobileRegexp1, "19182255030")
+	fmt.Println(vals)
+	vals = regexp2FindAllString(mobileRegexp1, "191 8225 5030")
+	fmt.Println(vals)
+	vals = regexp2FindAllString(mobileRegexp1, "1918 2255 030")
+	fmt.Println(vals)
+	vals = regexp2FindAllString(mobileRegexp1, "191-8225 5030")
+	fmt.Println(vals)
+}
+
+func demo6_1() {
+	vals := extractPhoneByGroup("这个 191-8225-5030，我的号码")
+	fmt.Println(vals)
+	vals = extractPhoneByGroup("这个1918-2255-030,我的号码")
+	fmt.Println(vals)
+	vals = extractPhoneByGroup("这个19182255030 我的号码")
+	fmt.Println(vals)
+	vals = extractPhoneByGroup("这个 191 8225 5030")
+	fmt.Println(vals)
+	vals = extractPhoneByGroup("这个  1918 2255 030我的号码")
+	fmt.Println(vals)
+	vals = extractPhoneByGroup("我的号码191-8225 5030 就这个")
 	fmt.Println(vals)
 }
 
 func demo7() {
-	vals := regexp2FindAllString(reTel, "1918 2255 0311")
+	vals := regexp2FindAllString(reTel, "1918-2255-0311")
 	fmt.Println(vals)
 	vals = regexp2FindAllString(reBadTel, "1918 2255 0311")
 	// vals := regexp2FindAllString(reTel, "2601692192")
@@ -158,5 +198,5 @@ func demo7() {
 }
 
 func Main() {
-	demo7()
+	demo6_1()
 }
