@@ -32,10 +32,14 @@ func Main() {
 
 	// Convert string to MD5 hash
 	hash := md5.Sum([]byte(str))
+	m := md5.New()
+	m.Write([]byte(str))
+	hash1 := m.Sum(nil)
 	// Encode MD5 hash to Base16 (hexadecimal)
 	hexStr := hex.EncodeToString(hash[:])
 
 	fmt.Println("Original String:", str)
-	fmt.Println("MD5 Hash:", hash)
+	fmt.Println("MD5 Hash :", hash)
+	fmt.Println("MD5 Hash1:", hash1)
 	fmt.Println("Base16 Encoded:", hexStr)
 }

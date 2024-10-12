@@ -17,11 +17,11 @@ var (
 	// PhoneRegex         = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{9})(?!\d)`, 0)
 	PhoneRegex    = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3})(?!\d)|(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4})(?!\d)`, 0)
 	mobileRegexp  = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3})(?!\d)|(?<!\d)(1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4})(?!\d)`, 0)
-	mobileRegexp1 = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}(?<sep>[ -]?)\d{4}\<sep>\d{3})(?!\d)|(?<!\d)(1[3|4|5|6|7|8|9]\d{1}(?<sep>[ -]?)\d{4}\<sep>\d{4})(?!\d)`, 0)
+	mobileRegexp1 = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}(?<sep>[-\s]?)\d{4}\<sep>\d{3})(?!\d)|(?<!\d)(1[3|4|5|6|7|8|9]\d{1}(?<sep>[-\s]?)\d{4}\<sep>\d{4})(?!\d)`, 0)
 	mobileRegexp2 = regexp2.MustCompile(`(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{2}(?<sep>[ -]?)?\d{4}\<sep>\d{3})(?!\d)|(?<!\d)(?<phone>1[3|4|5|6|7|8|9]\d{1}(?<sep>[ -]?)\d{4}\<sep>\d{4})(?!\d)`, 0)
 	reTel         = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4}|0(?:\d{2}-\d{8}|\d{3}-\d{7})|\d{3}-\d{3}-\d{4})(?!\d)`, 0)
 	reBadTel      = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{2,4}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{3,5})(?!\d)`, 0)
-	reSep         = regexp.MustCompile(`[ -]`)
+	reSep         = regexp.MustCompile(`[-\s]`)
 )
 
 func demo1() {
@@ -186,6 +186,9 @@ func demo6_1() {
 	fmt.Println(vals)
 	vals = extractPhoneByGroup("我的号码191-8225 5030 就这个")
 	fmt.Println(vals)
+	fmt.Println(reSep.ReplaceAllString("hello 	world", ""))
+	fmt.Println(reSep.ReplaceAllString("hello world", ""))
+	fmt.Println(reSep.ReplaceAllString("hello	world", ""))
 }
 
 func demo7() {
