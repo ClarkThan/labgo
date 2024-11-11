@@ -29,6 +29,8 @@ require (
 require (
 	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/RussellLuo/structs v1.2.0
+	github.com/buger/jsonparser v1.1.1
+	github.com/bytedance/sonic v1.12.3
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -36,8 +38,13 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nacos-group/nacos-sdk-go v1.1.4
 	github.com/samber/lo v1.39.0
+	github.com/segmentio/ksuid v1.0.4
+	github.com/tidwall/gjson v1.17.3
 	github.com/ua-parser/uap-go v0.0.0-20240113215029-33f8e6d47f38
+	github.com/valyala/fastjson v1.6.4
+	github.com/valyala/fasttemplate v1.2.2
 	golang.org/x/sync v0.8.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -47,11 +54,8 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.1 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1800 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/buger/jsonparser v1.1.1 // indirect
-	github.com/bytedance/sonic v1.12.3 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
@@ -91,14 +95,12 @@ require (
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.0 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
-	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	github.com/tidwall/gjson v1.17.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
-	github.com/valyala/fastjson v1.6.4 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
@@ -110,5 +112,4 @@ require (
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

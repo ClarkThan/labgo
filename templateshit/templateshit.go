@@ -4,8 +4,12 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"text/template"
+
+	"github.com/valyala/fasttemplate"
 )
 
 type Obj struct {
@@ -13,10 +17,11 @@ type Obj struct {
 	ObjectName string
 }
 
-func Main() {
+func demo1() {
 	templateStr := "https://{{.BucketName}}.meiqiausercontent.com/{{.ObjectName}}"
 	tpl, _ := template.New("media").Parse(templateStr)
-	obj := Obj{BucketName: "pics.meiqia.com", ObjectName: "xeqwrefqdqcaf34"}
+	// obj := Obj{BucketName: "pics.meiqia.com"} //, ObjectName: "xeqwrefqdqcaf34"}
+	obj := map[string]any{"BucketName": "pics.meiqia.com"}
 
 	// var b bytes.Buffer
 	var b strings.Builder
@@ -42,4 +47,30 @@ func Main() {
 	fmt.Println("MD5 Hash :", hash)
 	fmt.Println("MD5 Hash1:", hash1)
 	fmt.Println("Base16 Encoded:", hexStr)
+}
+
+func demo2() {
+	templateStr := "https://{{.BucketName}}.meiqiausercontent.com/{{.ObjectName}}\n"
+	t := fasttemplate.New(templateStr, "{{", "}}")
+	t.Execute(os.Stdout, map[string]interface{}{
+		"BucketName": "laigu",
+		"age":        "18",
+	})
+
+	fmt.Println()
+
+	t.ExecuteFunc(os.Stdout, func(w io.Writer, tag string) (int, error) {
+		switch tag {
+		case "name":
+			return w.Write([]byte("hjw"))
+		case "age":
+			return w.Write([]byte("20"))
+		}
+
+		return 0, nil
+	})
+}
+
+func Main() {
+	demo1()
 }
