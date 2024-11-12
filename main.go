@@ -3,6 +3,7 @@ package main
 import (
 	// prog "github.com/ClarkThan/labgo/alignshit"
 	// prog "github.com/ClarkThan/labgo/clickshit"
+	prog "github.com/ClarkThan/labgo/clickshit2"
 	// prog "github.com/ClarkThan/labgo/ctxshit"
 	// prog "github.com/ClarkThan/labgo/dbrshit"
 	// prog "github.com/ClarkThan/labgo/errshit"
@@ -17,7 +18,7 @@ import (
 	// prog "github.com/ClarkThan/labgo/promshit"
 	// prog "github.com/ClarkThan/labgo/redisshit"
 	// prog "github.com/ClarkThan/labgo/reflectshit"
-	prog "github.com/ClarkThan/labgo/regexpshit"
+	// prog "github.com/ClarkThan/labgo/regexpshit"
 	// prog "github.com/ClarkThan/labgo/sseshit"
 	// prog "github.com/ClarkThan/labgo/structshit"
 	// prog "github.com/ClarkThan/labgo/templateshit"
