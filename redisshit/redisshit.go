@@ -1013,7 +1013,7 @@ func demo27() {
 	log.Println("got ->", lastMaxID)
 }
 
-func Main() {
+func demo28() {
 	// err := utils.Verify("12345678A", "9cbd66f282f4b7347bc065d26cb3ac6ba7756d14bd570db9a2dbc14db92d2e06", "d74f1e50fb8c63fbc67cd1a47cdfd38c")
 	err := utils.Verify("12345678A", "$2a$12$qDo0t6jrhtuWEgJkZnh3YOyAt6/kPIEETEkXkD/CgnG2oQlf85Ake", "")
 	if err != nil {
@@ -1021,4 +1021,17 @@ func Main() {
 	} else {
 		log.Println("bravo!")
 	}
+}
+
+func demo29() {
+	err := rdb.GetDel(ctx, "not-exists-key-1").Err()
+	if errors.Is(err, redis.Nil) {
+		log.Println("shit", err)
+	} else {
+		log.Println("bravo!")
+	}
+}
+
+func Main() {
+	demo29()
 }

@@ -5,6 +5,7 @@ package clickshit2
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -37,6 +38,7 @@ var (
 )
 
 func init() {
+	init1()
 	init2()
 }
 
@@ -333,6 +335,13 @@ func demo5() {
 	if err != nil {
 		log.Fatalf("executing preparing statement failed: %v", err)
 	}
+
+	// var ms []Metric
+	// if err := rows.Scan(&ms); err != nil {
+	// 	log.Fatalf("scanning rows failed: %v", err)
+	// }
+	// fmt.Printf("len: %d,  vals: %+v\n", len(ms), ms)
+
 	columns, err := rows.Columns()
 	fmt.Println("row columns:", columns)
 	fmt.Println("err:", err)
@@ -341,49 +350,74 @@ func demo5() {
 	fmt.Println(err)
 }
 
-func SQLRowsToMap(rows *sql.Rows) (ds []map[string]any, err error) {
-	// 获取列名
-	columns, err := rows.Columns()
+type Metric struct {
+	Metric      string `ch:"metric"`
+	Value       int64  `ch:"value"`
+	Description string `ch:"description"`
+}
+
+// type Metric struct {
+// 	Metric      string
+// 	Value       int64
+// 	Description string
+// }
+
+func demo7() {
+	stmt, err := sqlDB.PrepareContext(ctx, "SELECT * FROM system.metrics WHERE metric = $1 LIMIT 1")
 	if err != nil {
-		err = fmt.Errorf("get columns: %w", err)
+		log.Fatalf("preparing statement failed: %v", err)
+	}
+	rows1, err := stmt.QueryContext(ctx, "Query")
+	if err != nil {
+		log.Fatalf("executing preparing statement1 failed: %v", err)
+	}
+	var ms1 []Metric
+	if err := rows1.Scan(&ms1); err != nil {
+		log.Fatalf("scanning rows failed: %v", err)
+	}
+	fmt.Printf("len: %d,  vals: %+v\n", len(ms1), ms1)
+
+	rows2, err := stmt.QueryContext(ctx, "Merge")
+	if err != nil {
+		log.Fatalf("executing preparing statement2 failed: %v", err)
+	}
+	var ms2 []Metric
+	if err := rows2.Scan(&ms2); err != nil {
+		log.Fatalf("scanning rows failed: %v", err)
+	}
+	fmt.Printf("len: %d,  vals: %+v\n", len(ms2), ms2)
+}
+
+func demo8() {
+	rows, err := sqlDB.QueryContext(ctx, "SELECT * FROM system.metrics limit 2")
+	if err != nil {
+		log.Fatalf("executing preparing statement failed: %v", err)
+	}
+	data, err := SQLRowsToMap(rows)
+	if err != nil {
+		log.Fatalf("scanning rows failed: %v", err)
+	}
+	fmt.Printf("len: %d,  vals: %+v\n", len(data), data)
+}
+
+func demo6() {
+	var metrics []*Metric
+	err := conn.Select(ctx, &metrics, "SELECT * FROM system.metrics limit 5")
+	if err != nil {
+		log.Fatalf("executing preparing statement failed: %v", err)
 		return
 	}
+	fmt.Printf("len: %d,  vals: %+v\n\n", len(metrics), metrics)
 
-	// 迭代每一行数据
-	for rows.Next() {
-		// 创建一个用于存储列值的切片
-		values := make([]any, len(columns))
-		for i := range values {
-			values[i] = new(any)
-		}
-		// 将列值扫描到values切片中
-		err := rows.Scan(values...)
-		if err != nil {
-			return nil, fmt.Errorf("scan values: %w", err)
-		}
-
-		// 创建一个用于存储结果的空map
-		row := make(map[string]any)
-
-		// 将列名和对应的值存储到结果map中
-		for i, column := range columns {
-			if values[i] == nil {
-				continue
-			}
-			row[column] = *(values[i].(*any))
-		}
-
-		ds = append(ds, row)
+	var m Metric
+	row := conn.QueryRow(ctx, "SELECT * FROM system.metrics Where metric != 'shit' limit 1")
+	if err := row.ScanStruct(&m); err == nil {
+		fmt.Printf("got one: %+v\n", m)
+	} else if errors.Is(err, sql.ErrNoRows) {
+		fmt.Printf("--- got err: %v\n", err)
 	}
-
-	// 检查是否有错误发生
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows last check: %w", err)
-	}
-
-	return
 }
 
 func Main() {
-	demo4()
+	demo6()
 }
