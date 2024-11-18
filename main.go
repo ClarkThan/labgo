@@ -3,9 +3,9 @@ package main
 import (
 	// prog "github.com/ClarkThan/labgo/alignshit"
 	// prog "github.com/ClarkThan/labgo/clickshit"
-	prog "github.com/ClarkThan/labgo/clickshit2"
+	// prog "github.com/ClarkThan/labgo/clickshit2"
 	// prog "github.com/ClarkThan/labgo/ctxshit"
-	// prog "github.com/ClarkThan/labgo/dbrshit"
+	prog "github.com/ClarkThan/labgo/dbrshit"
 	// prog "github.com/ClarkThan/labgo/errshit"
 	// prog "github.com/ClarkThan/labgo/fileup"
 	// prog "github.com/ClarkThan/labgo/ginshit"

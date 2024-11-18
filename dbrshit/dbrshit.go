@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,7 +32,8 @@ var (
 )
 
 func init() {
-	initQA("meiqia")
+	// initQA("meiqia")
+	initLocal()
 }
 
 func initQA(database string) {
@@ -619,6 +621,156 @@ func demo15() {
 	fmt.Printf("%#v\n,  %v", cfg, err)
 }
 
+type agentModel struct {
+	ID              int64          `db:"id"`
+	EntID           int64          `db:"enterprise_id"`
+	Avatar          dbr.NullString `db:"avatar"`
+	Email           dbr.NullString `db:"email"`
+	Nickname        dbr.NullString `db:"nickname"`
+	Realname        dbr.NullString `db:"realname"`
+	Password        dbr.NullString `db:"password"`
+	Privilege       dbr.NullString `db:"privilege"`
+	Cellphone       dbr.NullString `db:"cellphone"`
+	Status          dbr.NullString `db:"status"`
+	PublicCellphone dbr.NullString `db:"public_cellphone"`
+	PublicEmail     dbr.NullString `db:"public_email"`
+	QQ              dbr.NullString `db:"qq"`
+	Signature       dbr.NullString `db:"signature"`
+	Telephone       dbr.NullString `db:"telephone"`
+	Weixin          dbr.NullString `db:"weixin"`
+	Audience        dbr.NullString `db:"audience"`
+	Token           dbr.NullString `db:"token"`
+	WorkNum         dbr.NullString `db:"work_num"`
+	EmailActivated  dbr.NullInt64  `db:"email_activated"`
+	GroupID         int64          `db:"group_id"`
+	Rank            int64          `db:"rank"`
+	ServingLimit    int64          `db:"serving_limit"`
+	ReadFeatureID   dbr.NullInt64  `db:"read_feature_id"`
+	CreatedOn       *time.Time     `db:"created_on"`
+	LastUpdated     *time.Time     `db:"last_updated"`
+	LastActiveTime  *time.Time     `db:"last_active_time"`
+	LastLoginTime   *time.Time     `db:"last_login_time"`
+	DeletedAt       *time.Time     `db:"deleted_at"`
+	ServingType     dbr.NullInt64  `db:"serving_type"`
+	Phone           dbr.NullString `db:"phone"`
+}
+
+type Agent struct {
+	ID              int64      `json:"id" db:"id"`
+	EntID           int64      `json:"enterprise_id" mapstructure:"ent_id" db:"enterprise_id" kun:"descr=企业ID"`
+	Avatar          string     `json:"avatar" mapstructure:"avatar" db:"avatar" kun:"descr=头像"`
+	Email           string     `json:"email" mapstructure:"email" db:"email" kun:"descr=客服邮箱"`
+	Nickname        string     `json:"nickname" mapstructure:"nickname" db:"nickname" kun:"descr=昵称"`
+	Realname        string     `json:"realname" mapstructure:"realname" db:"realname" kun:"descr=真实姓名"`
+	Password        string     `json:"-" db:"password"`
+	Privilege       string     `json:"privilege" db:"privilege" kun:"descr=权限"`
+	Cellphone       string     `json:"cellphone" db:"cellphone"`
+	Status          string     `json:"status" db:"status" kun:"descr=在线状态"`
+	PublicCellphone string     `json:"public_cellphone" db:"public_cellphone"`
+	PublicEmail     string     `json:"public_email" db:"public_email"`
+	QQ              string     `json:"qq" db:"qq"`
+	Signature       string     `json:"signature" db:"signature"`
+	Telephone       string     `json:"telephone" db:"telephone"`
+	Weixin          string     `json:"weixin" db:"weixin"`
+	Audience        string     `json:"-" db:"audience"`
+	Token           string     `json:"token" db:"token"`
+	WorkNum         string     `json:"work_num" db:"work_num" kun:"descr=工号"`
+	EmailActivated  int64      `json:"email_activated" db:"email_activated" kun:"descr=邮件是否激活"`
+	GroupID         int64      `json:"group_id" mapstructure:"group_id" db:"group_id" kun:"descr=分组ID"`
+	Rank            int64      `json:"rank" db:"rank"`
+	ServingLimit    int64      `json:"serving_limit" db:"serving_limit" kun:"descr=服务上限"`
+	ReadFeatureID   int64      `json:"read_feature_id" db:"read_feature_id"`
+	CreatedOn       *time.Time `json:"created_on" db:"created_on" kun:"descr=创建时间"`
+	LastUpdated     *time.Time `json:"-" db:"last_updated"`
+	LastActiveTime  *time.Time `json:"-" db:"last_active_time"`
+	LastLoginTime   *time.Time `json:"-" db:"last_login_time"`
+	DeletedAt       *time.Time `json:"deleted_at" db:"deleted_at" kun:"descr=删除时间"`
+	ServingType     int64      `json:"serving_type" db:"serving_type" mapstructure:"serving_type"`
+	ServingTypes    []string   `json:"serving_types" db:"-" kun:"descr=账号类型"`
+	IsOnline        bool       `json:"is_online" db:"-"`
+}
+
+func (agentM *agentModel) toAgent() *Agent {
+	return &Agent{
+		ID:              agentM.ID,
+		EntID:           agentM.EntID,
+		GroupID:         agentM.GroupID,
+		Avatar:          agentM.Avatar.String,
+		Email:           agentM.Email.String,
+		Nickname:        agentM.Nickname.String,
+		Realname:        agentM.Realname.String,
+		Password:        agentM.Password.String,
+		Cellphone:       agentM.Cellphone.String,
+		Status:          agentM.Status.String,
+		Privilege:       agentM.Privilege.String,
+		PublicCellphone: agentM.PublicCellphone.String,
+		PublicEmail:     agentM.PublicEmail.String,
+		QQ:              agentM.QQ.String,
+		Signature:       agentM.Signature.String,
+		Telephone:       agentM.Telephone.String,
+		Weixin:          agentM.Weixin.String,
+		Audience:        agentM.Audience.String,
+		Token:           agentM.Token.String,
+		WorkNum:         agentM.WorkNum.String,
+		EmailActivated:  agentM.EmailActivated.Int64,
+		Rank:            agentM.Rank,
+		ServingLimit:    agentM.ServingLimit,
+		ReadFeatureID:   agentM.ReadFeatureID.Int64,
+		CreatedOn:       agentM.CreatedOn,
+		LastUpdated:     agentM.LastUpdated,
+		LastActiveTime:  agentM.LastActiveTime,
+		LastLoginTime:   agentM.LastLoginTime,
+		DeletedAt:       agentM.DeletedAt,
+		ServingType:     agentM.ServingType.Int64,
+		// ServingTypes:    models.ConvertServingType(agentM.ServingType.Int64),
+	}
+}
+
+func demo16() {
+	columns := []string{"*"}
+	var agentM agentModel
+	err := sess.Select(columns...).
+		From("agent_info").
+		Where(dbr.Eq("id", 1)).
+		LoadOneContext(ctx, &agentM)
+
+	if err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+
+	agent := agentM.toAgent()
+	log.Printf("agent: %v\n", agent)
+}
+
+func asString(src any) string {
+	switch v := src.(type) {
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	}
+	rv := reflect.ValueOf(src)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(rv.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(rv.Uint(), 10)
+	case reflect.Float64:
+		return strconv.FormatFloat(rv.Float(), 'g', -1, 64)
+	case reflect.Float32:
+		return strconv.FormatFloat(rv.Float(), 'g', -1, 32)
+	case reflect.Bool:
+		return strconv.FormatBool(rv.Bool())
+	}
+	return fmt.Sprintf("%v", src)
+}
+
 func Main() {
-	demo15()
+	var f1 float64 = 120000
+	var f2 float64 = 3945000
+	var f3 []uint8 = []uint8{51, 57, 52, 53, 48, 48, 48}
+	fmt.Println(asString(f1))
+	fmt.Println(asString(f2))
+	fmt.Println(asString(f3))
+	demo16() // go-sql-mysql 1.7.1 和 1.8.1(有问题)
 }
