@@ -766,8 +766,8 @@ func asString(src any) string {
 }
 
 func Main() {
-	var f1 float64 = 120000
-	var f2 float64 = 3945000
+	var f1 float64 = 999999
+	var f2 float64 = 1000000
 	var f3 []uint8 = []uint8{51, 57, 52, 53, 48, 48, 48}
 	fmt.Println(asString(f1))
 	fmt.Println(asString(f2))

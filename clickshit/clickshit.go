@@ -59,15 +59,7 @@ func clickhouseTime(t time.Time) string {
 	return t.Format(`2006-01-02T15:04:05.999999`)
 }
 
-func Fetch(ctx context.Context, sql string, args ...any) (ds []map[string]any, err error) {
-	rows, err := click.QueryxContext(ctx, sql, args...)
-	if rows != nil {
-		defer rows.Close()
-	}
-	if err != nil {
-		return nil, fmt.Errorf("click report queryx: %w", err)
-	}
-
+func SqlxRowsToMap(rows *sqlx.Rows) (ds []map[string]any, err error) {
 	for rows.Next() {
 		rowMap := make(map[string]any)
 		if err := rows.MapScan(rowMap); err != nil {
@@ -95,6 +87,18 @@ func Fetch(ctx context.Context, sql string, args ...any) (ds []map[string]any, e
 	}
 
 	return
+}
+
+func Fetch(ctx context.Context, sql string, args ...any) (ds []map[string]any, err error) {
+	rows, err := click.QueryxContext(ctx, sql, args...)
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf("click report queryx: %w", err)
+	}
+
+	return SqlxRowsToMap(rows)
 }
 
 func demo1() {
@@ -245,16 +249,16 @@ func demo2() {
 	var entID int64 = 10
 	trafficType := 1
 	visitID := "2dG4t5KoIL9tMFkL9zT8eLger53"
-	createdTS := `2024-03-05T04:00:00`
+	createdTS := `2024-01-05T04:00:00`
 
 	sql := `
 		SELECT * FROM report.visit_conv_distributed
-		WHERE ent_id = ? AND traffic_type = ? AND visit_id = ? AND sign = 1 and created_on >= toDateTime64(?, 6)
+		WHERE ent_id = ? AND visit_id = ? AND traffic_type = ? AND sign = 1 and created_on >= toDateTime64(?, 6)
 		ORDER BY version DESC
 		LIMIT 1
 	`
 
-	rows, err := conn.QueryContext(ctx, sql, entID, trafficType, visitID, createdTS)
+	rows, err := conn.QueryContext(ctx, sql, entID, visitID, trafficType, createdTS)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -269,6 +273,8 @@ func demo2() {
 
 	if len(ds) > 0 {
 		log.Printf("get %+v\n", ds[0])
+	} else {
+		log.Println("empty data")
 	}
 }
 
@@ -383,7 +389,7 @@ func demo8() {
 	fmt.Println("concurrent process end")
 }
 
-func Main() {
+func demo9() {
 	// var m *MM
 	// log.Println(m.IsOk())
 	// demo1_2()
@@ -401,4 +407,175 @@ func Main() {
 	}
 	wg.Wait()
 	fmt.Println("concurrent process end")
+}
+
+func demo10() {
+	conn, err := click.Conn(ctx)
+	if conn != nil {
+		defer conn.Close()
+	}
+	if err != nil {
+		log.Fatalf("conn err: %v\n", err)
+	}
+
+	entID := 10
+	startTS := "2024-11-15 16:00:00"
+	endTS := "2024-11-19T16:00:00"
+	agentIDs := []int64{9112, 1456, 8997, 9106, 9124, 9125, 2107440, 2107442, 2107456, 2107465}
+
+	// clickhouse/v2 不支持 hasAny([?], redirects.from_agent_id)
+	sql := `
+		SELECT 
+  			toStartOfHour(created_on) as hour, sum(mbot_match_cnt * sign * is_new_visit) as match_cnt, 
+  			sumIf(sign, agent_type == 3 OR has(redirects.from_agent_type, 3)) as ini_conv_cnt, 
+  			sumIf(is_effective * sign, agent_type == 3 OR has(redirects.from_agent_type, 3)) as effective_conv_cnt, 
+  			sum(is_mbot_conv_complete * sign) as fin_conv_cnt, 
+  			sumIf(accurate_clue_cnt * sign, agent_type == 3 OR has(redirects.from_agent_type, 3)) as clue_cnt, 
+  			sumIf(sign, has(redirects.from_agent_type, 3)) as direct_cnt 
+		FROM report.visit_conv_distributed
+		WHERE ent_id = ? and conv_ended_on >= toDateTime64(?, 6) 
+		and conv_ended_on < toDateTime64(?, 6) 
+		and (agent_id in (?) or hasAny(?, redirects.from_agent_id))
+		GROUP BY hour HAVING sum(sign) > 0;
+	`
+
+	rows, err := conn.QueryContext(ctx, sql, entID, startTS, endTS, agentIDs, agentIDs)
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		log.Fatalf("query rows err: %v\n", err)
+	}
+
+	ds, err := SQLRowsToMap(rows)
+	if err != nil {
+		log.Fatalf("query data fail: %v\n", err)
+	}
+
+	if len(ds) > 0 {
+		log.Printf("get %+v\n", ds[0])
+	} else {
+		log.Println("empty data")
+	}
+}
+
+func demo11() {
+	entID := 10
+	startTS := "2024-11-15 16:00:00"
+	endTS := "2024-11-19T16:00:00"
+	agentIDs := []int64{9112, 1456, 8997, 9106, 9124, 9125, 2107440, 2107442, 2107456, 2107465}
+	values := map[string]any{"ent_id": entID, "start": startTS, "end": endTS, "agent_ids": agentIDs}
+
+	// clickhouse/v2 不支持 hasAny([:agent_ids] 的写法
+	sql := `
+		SELECT 
+  			toStartOfHour(created_on) as hour, sum(mbot_match_cnt * sign * is_new_visit) as match_cnt, 
+  			sumIf(sign, agent_type == 3 OR has(redirects.from_agent_type, 3)) as ini_conv_cnt, 
+  			sumIf(is_effective * sign, agent_type == 3 OR has(redirects.from_agent_type, 3)) as effective_conv_cnt, 
+  			sum(is_mbot_conv_complete * sign) as fin_conv_cnt, 
+  			sumIf(accurate_clue_cnt * sign, agent_type == 3 OR has(redirects.from_agent_type, 3)) as clue_cnt, 
+  			sumIf(sign, has(redirects.from_agent_type, 3)) as direct_cnt 
+		FROM report.visit_conv_distributed
+		WHERE ent_id = :ent_id and conv_ended_on >= toDateTime64(:start, 6) 
+		and conv_ended_on < toDateTime64(:end, 6) 
+		and (agent_id in (:agent_ids) or hasAny(:agent_ids, redirects.from_agent_id))
+		GROUP BY hour HAVING sum(sign) > 0;
+	`
+
+	rows, err := click.NamedQueryContext(ctx, sql, values)
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		log.Fatalf("query rows err: %v\n", err)
+	}
+
+	ds, err := SqlxRowsToMap(rows)
+	if err != nil {
+		log.Fatalf("query data fail: %v\n", err)
+	}
+
+	if len(ds) > 0 {
+		log.Printf("get %+v\n", ds[0])
+	} else {
+		log.Println("empty data")
+	}
+}
+
+func demo12() {
+	sql := `SELECT * FROM salesadmin.trigger_d_ limit 1;`
+	ds, err := Fetch(ctx, sql)
+	if err != nil {
+		log.Fatalf("query data fail: %v\n", err)
+	}
+
+	log.Printf("got: %v\n", ds)
+}
+
+/*
+CREATE TABLE privatization_cafe_activity.activity_lt
+(
+    `id` String COMMENT '主键ID',
+    `app_id` String COMMENT '应用ID',
+    `module_code` String COMMENT '模块编码',
+    `module_name` String COMMENT '模块名称',
+    `ent_id` String COMMENT '企业ID',
+    `ent_code` String COMMENT '企业Code',
+    `ent_name` String COMMENT '企业名称',
+    `operator_id` String COMMENT '操作人ID',
+    `operator_name` String COMMENT '操作人名称',
+    `action_event` String COMMENT '行为事件',
+    `action_event_name` String COMMENT '行为事件名称',
+    `action_time` UInt64 COMMENT '行为发生的时间戳',
+    `action_data` String COMMENT '行为内容（JSON格式）',
+    `create_time` UInt64 COMMENT '保存数据的时间戳',
+    `ds` UInt32 COMMENT '日期（分区使用）'
+)
+*/
+
+var LocalTableName string = "privatization_cafe_activity.activity_lt"
+
+func demo13() {
+	tx, err := click.Begin()
+	if err != nil {
+		log.Fatalf("begin tx err: %v\n", err)
+	}
+
+	// clickhouse/v1 居然能容忍 下面的语句 （多了 values）
+	stmt, err := tx.Prepare(`insert into ` + LocalTableName +
+		` values (id, app_id, module_code, module_name, ent_id, ent_code,ent_name,operator_id,operator_name,action_event, action_event_name,action_time,action_data,create_time,ds)
+		VALUES (?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?, ? );`)
+	if err != nil {
+		log.Fatalf("prepare stmt err: %v\n", err)
+	}
+	if _, err := stmt.Exec(
+		"3b60927592ff49ad8a2f74cbfdc87eee",
+		"22222",
+		"SALE_ENTERPRISE",
+		"售卖-企业",
+		"65b31d6724701833711a8f63",
+		"77",
+		"xlsx",
+		"29g9pbgr8wlkz3do6tm61ly74s3ki2lw",
+		"廖明双",
+		"USER_LOGIN",
+		"通行证-登录",
+		1706178865799,
+		`{"belong":"system"}`,
+		1706178865842,
+		20240125,
+	); err != nil {
+		log.Fatalf("exec stmt err: %v\n", err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Fatalf("commit tx err: %v\n", err)
+	}
+
+	log.Println("insert success")
+}
+
+func Main() {
+	demo13()
 }

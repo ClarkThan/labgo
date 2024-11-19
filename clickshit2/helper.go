@@ -3,7 +3,14 @@ package clickshit2
 import (
 	"database/sql"
 	"fmt"
+	"time"
+
+	"github.com/jmoiron/sqlx"
 )
+
+func clickhouseTime(t time.Time) string {
+	return t.Format(`2006-01-02T15:04:05.999999`)
+}
 
 func SQLRowsToMap(rows *sql.Rows) (ds []map[string]any, err error) {
 	// 获取列名
@@ -43,6 +50,36 @@ func SQLRowsToMap(rows *sql.Rows) (ds []map[string]any, err error) {
 	// 检查是否有错误发生
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows last check: %w", err)
+	}
+
+	return
+}
+
+func SqlxRowsToMap(rows *sqlx.Rows) (ds []map[string]any, err error) {
+	for rows.Next() {
+		rowMap := make(map[string]any)
+		if err := rows.MapScan(rowMap); err != nil {
+			return nil, fmt.Errorf("rows map scan: %w", err)
+		}
+
+		for k, v := range rowMap {
+			switch val := v.(type) {
+			case time.Time:
+				rowMap[k] = clickhouseTime(val)
+			case []uint8:
+				if len(val) == 0 {
+					delete(rowMap, k)
+				} else {
+					newSlice := make([]any, 0, len(val))
+					for _, it := range val {
+						newSlice = append(newSlice, it)
+					}
+					rowMap[k] = newSlice
+				}
+			}
+		}
+
+		ds = append(ds, rowMap)
 	}
 
 	return
