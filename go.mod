@@ -7,16 +7,16 @@ toolchain go1.22.5
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.5.1
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets v0.12.0
-	// github.com/ClickHouse/clickhouse-go/v2 v2.23.0
+	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/dlclark/regexp2 v1.10.0
 	github.com/fatih/structs v1.1.0
 	github.com/gin-contrib/pprof v1.4.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/go-sql-driver/mysql v1.7.1
+	github.com/go-sql-driver/mysql v1.8.1
 	github.com/google/go-cmp v0.6.0
-	github.com/jmoiron/sqlx v1.3.5
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/timonwong/dbr v0.0.0-20180322091828-03eebc359ac8
 	go.uber.org/zap v1.27.0
@@ -28,7 +28,6 @@ require (
 
 require (
 	github.com/ClickHouse/clickhouse-go v1.5.4
-	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
 	github.com/RussellLuo/structs v1.2.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/bytedance/sonic v1.12.3
@@ -87,9 +86,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
-	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

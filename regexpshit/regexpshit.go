@@ -212,6 +212,15 @@ func demo7() {
 	fmt.Println(vals)
 }
 
+func demo8() {
+	r, err := regexp2.Compile(`\b(?!Facebook|Instagram|WhatsApp|Telegram|Email)[a-zA-Z][-_a-zA-Z0-9]{5,19}\b`, 0)
+	if err != nil {
+		log.Fatal("compile re fail", err)
+	}
+	vals := regexp2FindAllString(r, "我的wx是 Telegram lenplex WhatsApp foobar123 Email123 Instagram")
+	fmt.Println(vals)
+}
+
 func Main() {
-	demo6_1()
+	demo8()
 }

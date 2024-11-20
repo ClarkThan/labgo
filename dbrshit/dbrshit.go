@@ -727,6 +727,7 @@ func (agentM *agentModel) toAgent() *Agent {
 }
 
 func demo16() {
+	// go-sql-mysql 1.7.1 和 1.8.1(有问题)
 	columns := []string{"*"}
 	var agentM agentModel
 	err := sess.Select(columns...).
@@ -765,12 +766,29 @@ func asString(src any) string {
 	return fmt.Sprintf("%v", src)
 }
 
-func Main() {
+func demo17() {
 	var f1 float64 = 999999
 	var f2 float64 = 1000000
 	var f3 []uint8 = []uint8{51, 57, 52, 53, 48, 48, 48}
 	fmt.Println(asString(f1))
 	fmt.Println(asString(f2))
 	fmt.Println(asString(f3))
-	demo16() // go-sql-mysql 1.7.1 和 1.8.1(有问题)
+}
+
+func demo18() {
+	// COALESCE(MAX(`rank`),0)
+	// IFNULL(SUM(`rank`), 0)
+	var maxRank float64
+	err := sess.Select("IFNULL(SUM(`rank`), 0)").
+		From("selecting_rule").
+		Where("enterprise_id = ?", 99999).
+		LoadOneContext(ctx, &maxRank)
+	if err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+	log.Println("got", maxRank)
+}
+
+func Main() {
+	demo18()
 }
