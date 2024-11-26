@@ -3,6 +3,7 @@ package dbrshit
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -778,15 +779,19 @@ func demo17() {
 func demo18() {
 	// COALESCE(MAX(`rank`),0)
 	// IFNULL(SUM(`rank`), 0)
-	var maxRank float64
-	err := sess.Select("IFNULL(SUM(`rank`), 0)").
+	// var maxRank float64
+	var maxRank sql.NullFloat64
+	err := sess.Select("MAX(`rank`)").
 		From("selecting_rule").
 		Where("enterprise_id = ?", 99999).
 		LoadOneContext(ctx, &maxRank)
 	if err != nil {
 		log.Fatalf("got err: %v\n", err)
 	}
-	log.Println("got", maxRank)
+	log.Println("got", maxRank.Float64)
+
+	var xx sql.NullInt64
+	log.Println(xx.Int64)
 }
 
 func Main() {

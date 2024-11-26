@@ -1032,6 +1032,19 @@ func demo29() {
 	}
 }
 
+func demo30() {
+	err := rdb.Del(ctx, "not-exists-key-1", "not-exists-key-1").Err()
+	if err == nil {
+		log.Println("ok")
+		return
+	}
+	if errors.Is(err, redis.Nil) {
+		log.Println("shit", err)
+	} else {
+		log.Println("bravo!")
+	}
+}
+
 func Main() {
-	demo29()
+	demo30()
 }

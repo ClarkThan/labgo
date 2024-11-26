@@ -109,6 +109,7 @@ func init() {
 	}
 
 	db = gormDB
+	// initRWDB()
 
 	initSnowflake()
 }
