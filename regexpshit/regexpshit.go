@@ -22,6 +22,7 @@ var (
 	reTel         = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{3}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{4}|0(?:\d{2}-\d{8}|\d{3}-\d{7})|\d{3}-\d{3}-\d{4})(?!\d)`, 0)
 	reBadTel      = regexp2.MustCompile(`(?<!\d)(1[3|4|5|6|7|8|9]\d{2}\s?\d{4}\s?\d{2,4}|1[3|4|5|6|7|8|9]\d{1}\s?\d{4}\s?\d{3,5})(?!\d)`, 0)
 	reSep         = regexp.MustCompile(`[-\s/]`)
+	reWeiXin      = regexp2.MustCompile(`[a-zA-Z-_][0-9a-zA-Z-_]{5,19}`, 0)
 )
 
 func demo1() {
@@ -219,6 +220,12 @@ func demo8() {
 	}
 	vals := regexp2FindAllString(r, "我的wx是 Telegram lenplex WhatsApp foobar123 Email123 Instagram")
 	fmt.Println(vals)
+
+	weiXin, _ := reWeiXin.FindStringMatch("-4Oxygen19")
+	if weiXin != nil {
+		weiXinS := weiXin.Capture.String()
+		fmt.Println(weiXinS)
+	}
 }
 
 func Main() {

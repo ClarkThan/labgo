@@ -101,7 +101,7 @@ func initSnowflake() {
 
 func init() {
 	// dsn := "test:12345687@tcp(127.0.0.1:3306)/test?charset=utf8&parseTime=True&loc=Local"
-	dsn := "meiqia:f_xByc=9Dy+ZCbH1@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/meiqia?charset=utf8&parseTime=True&loc=Local"
+	dsn := "meiqia:JzpaqsFKtIacA!V@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/meiqia?charset=utf8&parseTime=True&loc=Local"
 	//连接MYSQL
 	gormDB, err := gorm.Open(mysql.Open(dsn)) // , &gorm.Config{})
 	if err != nil {
@@ -950,6 +950,11 @@ func demo33() {
 	log.Printf("set: %v\n", set)
 }
 
+type DevClientTrack struct {
+	DevClientID string `gorm:"column:dev_client_id"`
+	TrackID     string `gorm:"column:track_id"`
+}
+
 func demo34() {
 	var exists bool
 	// var exists int
@@ -957,6 +962,23 @@ func demo34() {
 		log.Fatalf("query robot_membership error: %v\n", err)
 	}
 	fmt.Println(exists)
+
+	var entID int64 = 2
+	trackIDs := []string{"2MJhQbmOVxn411vDL7ODq2d4pgQ", "2NH1waNRUcXQJxaN0ggColpRSxP", "2NPHs9vG1XFxPbd33gw1jhcRsDv"}
+	var data []*DevClientTrack
+	err := db.Table(`dev_client_track`).Select(`dev_client_id, track_id`).Where(`enterprise_id = ? AND track_id in ?`, entID, trackIDs).Scan(&data).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+
+	ret := make(map[string]string, len(data))
+	for _, v := range data {
+		ret[v.TrackID] = v.DevClientID
+	}
+
+	for k, v := range ret {
+		fmt.Println(k, v)
+	}
 }
 
 func Main() {
