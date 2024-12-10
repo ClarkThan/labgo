@@ -33,13 +33,13 @@ var (
 )
 
 func init() {
-	// initQA("meiqia")
-	initLocal()
+	initQA("meiqia")
+	// initLocal()
 }
 
 func initQA(database string) {
 	// dsn := "test:12345687@tcp(127.0.0.1:3306)/test?charset=utf8&parseTime=True&loc=Local"
-	dsn := fmt.Sprintf("meiqia:f_xByc=9Dy+ZCbH1@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/%s?charset=utf8&parseTime=True&loc=Local", database)
+	dsn := fmt.Sprintf("meiqia:JzpaqsFKtIacA!V@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/%s?charset=utf8&parseTime=True&loc=Local", database)
 
 	// opens a database
 	conn, err := dbr.Open("mysql", dsn, &dbr.NullEventReceiver{})
@@ -794,6 +794,70 @@ func demo18() {
 	log.Println(xx.Int64)
 }
 
+type Assignment struct {
+	Target     string `json:"target"`
+	TargetKind string `json:"target_kind"`
+}
+
+type Menu struct {
+	Assignments []Assignment `json:"assignments"`
+}
+
+type FormDef struct {
+	Menus Menu `json:"menus"`
+}
+
+type form struct {
+	FormDef string `json:"form_def"`
+}
+
+func (f *form) Transform() (*Form, error) {
+	var formDef FormDef
+	if f.FormDef != "" {
+		if err := json.Unmarshal([]byte(f.FormDef), &formDef); err != nil {
+			return nil, err
+		}
+	}
+
+	return &Form{
+		FormDef: formDef,
+	}, nil
+}
+
+type Form struct {
+	FormDef FormDef `json:"form_def"`
+}
+
+func GetForms(ctx context.Context, entID int64, subSources []string) (reForm []*Form) {
+	var f []form
+	_, err := sess.Select("form_def").From(`form`).Where(dbr.And(
+		dbr.Eq("enterprise_id", entID),
+		dbr.Eq("sub_source", subSources),
+	)).LoadContext(ctx, &f)
+	if err != nil {
+		log.Fatalf("1 got err: %v\n", err)
+	}
+	for _, perF := range f {
+		form, err := perF.Transform()
+		if err != nil {
+			log.Fatalf("2 got err: %v\n", err)
+		}
+		reForm = append(reForm, form)
+	}
+
+	return reForm
+}
+
+func demo19() {
+	form := GetForms(ctx, 10, []string{"11ac238fae3a12500d0964c0bd4d2e83"})
+	// log.Printf("form: %v\n", form[0].FormDef.Menus.Assignments[0])
+	if len(form) > 0 {
+		for _, a := range form[0].FormDef.Menus.Assignments {
+			log.Printf("k: %v, v: %v\n", a.Target, a.TargetKind)
+		}
+	}
+}
+
 func Main() {
-	demo18()
+	demo19()
 }

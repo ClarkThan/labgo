@@ -60,7 +60,7 @@ func initRWDB() {
 		log.Fatalf("连接数据库失败: %v", err)
 	}
 
-	slaveDSN := "meiqia:f_xByc=9Dy+ZCbH1@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/meiqia?charset=utf8&parseTime=True&loc=Local"
+	slaveDSN := "meiqia:JzpaqsFKtIacA!V@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/meiqia?charset=utf8&parseTime=True&loc=Local"
 	slaveDialector := mysql.New(mysql.Config{DSN: slaveDSN})
 
 	resolver := dbresolver.Register(dbresolver.Config{
