@@ -858,6 +858,23 @@ func demo19() {
 	}
 }
 
+func demo20() {
+	var entID int64 = 10
+	trackID := "2MB8zVBslVGMUgJkhcSlU5EGT4Ex"
+	var conv struct {
+		EndedOn time.Time `db:"ended_on"`
+	}
+	// var endedOn time.Time
+	cnt, err := sess.Select("ended_on").From(`conversation_v1`).Where("enterprise_id = ? and track_id = ?", entID, trackID).
+		OrderDir("created_on", false).Limit(1).Load(&conv)
+	if err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+
+	fmt.Println(cnt)
+	fmt.Println(conv.EndedOn)
+}
+
 func Main() {
-	demo19()
+	demo20()
 }

@@ -5,7 +5,7 @@ import (
 	// prog "github.com/ClarkThan/labgo/clickshit"
 	// prog "github.com/ClarkThan/labgo/clickshit2"
 	// prog "github.com/ClarkThan/labgo/ctxshit"
-	prog "github.com/ClarkThan/labgo/dbrshit"
+	// prog "github.com/ClarkThan/labgo/dbrshit"
 	// prog "github.com/ClarkThan/labgo/errshit"
 	// prog "github.com/ClarkThan/labgo/fileup"
 	// prog "github.com/ClarkThan/labgo/ginshit"
@@ -26,6 +26,7 @@ import (
 	// prog "github.com/ClarkThan/labgo/uaparsershit"
 	// prog "github.com/ClarkThan/labgo/yamlshit"
 	// prog "github.com/ClarkThan/labgo/zapshit"
+	prog "github.com/ClarkThan/labgo/elasticshit"
 )
 
 func main() {
