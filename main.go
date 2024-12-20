@@ -26,7 +26,9 @@ import (
 	// prog "github.com/ClarkThan/labgo/uaparsershit"
 	// prog "github.com/ClarkThan/labgo/yamlshit"
 	// prog "github.com/ClarkThan/labgo/zapshit"
-	prog "github.com/ClarkThan/labgo/elasticshit"
+	// prog "github.com/ClarkThan/labgo/elasticshit"
+	// prog "github.com/ClarkThan/labgo/benchshit"
+	prog "github.com/ClarkThan/labgo/minioshit"
 )
 
 func main() {
