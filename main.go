@@ -9,7 +9,7 @@ import (
 	// prog "github.com/ClarkThan/labgo/errshit"
 	// prog "github.com/ClarkThan/labgo/fileup"
 	// prog "github.com/ClarkThan/labgo/ginshit"
-	// prog "github.com/ClarkThan/labgo/gormshit"
+	prog "github.com/ClarkThan/labgo/gormshit"
 	// prog "github.com/ClarkThan/labgo/httpclient"
 	// prog "github.com/ClarkThan/labgo/jsonshit"
 	// prog "github.com/ClarkThan/labgo/nacosshit"
@@ -28,7 +28,8 @@ import (
 	// prog "github.com/ClarkThan/labgo/zapshit"
 	// prog "github.com/ClarkThan/labgo/elasticshit"
 	// prog "github.com/ClarkThan/labgo/benchshit"
-	prog "github.com/ClarkThan/labgo/minioshit"
+	// prog "github.com/ClarkThan/labgo/minioshit"
+	// prog "github.com/ClarkThan/labgo/syncshit"
 )
 
 func main() {

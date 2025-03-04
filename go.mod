@@ -31,6 +31,8 @@ require (
 	github.com/RussellLuo/structs v1.2.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/bytedance/sonic v1.12.3
+	github.com/gobwas/httphead v0.1.0
+	github.com/gobwas/ws v1.4.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -39,6 +41,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nacos-group/nacos-sdk-go v1.1.4
 	github.com/olivere/elastic/v7 v7.0.32
+	github.com/panjf2000/gnet/v2 v2.6.3
 	github.com/samber/lo v1.39.0
 	github.com/segmentio/ksuid v1.0.4
 	github.com/tidwall/gjson v1.17.3
@@ -46,6 +49,7 @@ require (
 	github.com/valyala/fastjson v1.6.4
 	github.com/valyala/fasttemplate v1.2.2
 	golang.org/x/sync v0.8.0
+	golang.org/x/sys v0.26.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -77,6 +81,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
@@ -98,6 +103,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/onsi/gomega v1.27.4 // indirect
+	github.com/panjf2000/ants/v2 v2.10.0 // indirect
 	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
@@ -123,10 +129,9 @@ require (
 	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

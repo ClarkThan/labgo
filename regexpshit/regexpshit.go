@@ -222,6 +222,7 @@ func demo8() {
 	fmt.Println(vals)
 
 	weiXin, _ := reWeiXin.FindStringMatch("-4Oxygen19")
+	// weiXin, _ := reWeiXin.FindStringMatch("我的是否https://www.toutiao.com/app小擦伤")
 	if weiXin != nil {
 		weiXinS := weiXin.Capture.String()
 		fmt.Println(weiXinS)

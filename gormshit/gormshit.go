@@ -46,7 +46,7 @@ func initRWDB() {
 	//连接MYSQL
 	gormDB, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{TablePrefix: "", SingularTable: true},
-		// Logger:         logger.Default.LogMode(logger.Silent),
+		// Logger:         logger.Default.LogMode(logger.Info),
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags),
 			logger.Config{
@@ -101,9 +101,11 @@ func initSnowflake() {
 
 func init() {
 	// dsn := "test:12345687@tcp(127.0.0.1:3306)/test?charset=utf8&parseTime=True&loc=Local"
-	dsn := "meiqia:JzpaqsFKtIacA!V@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/meiqia?charset=utf8&parseTime=True&loc=Local"
+	dsn := "meiqia:JzpaqsFKtIacA!V@tcp(pc-8vbvpi114t895m715.mysql.polardb.zhangbei.rds.aliyuncs.com:3306)/new_meiqia?charset=utf8&parseTime=True&loc=Local"
 	//连接MYSQL
-	gormDB, err := gorm.Open(mysql.Open(dsn)) // , &gorm.Config{})
+	gormDB, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		log.Fatalf("连接数据库失败: %v", err)
 	}
@@ -212,8 +214,8 @@ func demo5() {
 
 func demo6() {
 	var exists bool
-	// err := db.Raw("select exists (select 1 from robot_membership where ent_id in ?)", []int64{100, 220, 800}).First(&exists).Error
-	err := db.Model(&Membership{}).Select("count(*) > 0").Where("ent_id in ?", []int64{100, 220, 80}).First(&exists).Error
+	err := db.Raw("select exists (select 1 from robot_membership where ent_id not in ?)", []int64{100, 220, 800}).First(&exists).Error
+	// err := db.Model(&Membership{}).Select("count(*) > 0").Where("ent_id in ?", []int64{100, 220, 80}).First(&exists).Error
 	if err != nil {
 		log.Printf("demo6: %v\n", err)
 		return
@@ -981,6 +983,310 @@ func demo34() {
 	}
 }
 
+func GetOne(table string, where map[string]any, out any, columns ...string) error {
+	// sql := fmt.Sprintf("SELECT * FROM %s WHERE %s LIMIT 1", table, buildWhere(where))
+	// return db.Raw(sql).Scan(out).Error
+	return db.Select(columns).Table(table).Where(where).Limit(1).Scan(&out).Error
+}
+
+func Find(table string, out any, where map[string]any, columns ...string) error {
+	// if len(columns) > 0 {
+	// 	return db.Select(columns).Table(table).Where(where).Find(out).Error
+	// }
+
+	return db.Select(columns).Table(table).Where(where).Find(out).Error
+}
+
+func FindIn(table string, out any, inColumn string, inVals any, columns ...string) error {
+	// if len(columns) > 0 {
+	// 	return db.Select(columns).Table(table).Where(where).Find(out).Error
+	// }
+	inCond := fmt.Sprintf("`%s` IN ?", inColumn)
+	return db.Select(columns).Table(table).Where(inCond, inVals).Find(out).Error
+}
+
+func FindByColumn(table string, column string, out any, where map[string]any) error {
+	return db.Table(table).Where(where).Limit(1).Pluck(column, out).Error
+}
+
+func Count(table string, where map[string]any) (int64, error) {
+	var total int64
+	err := db.Table(table).Where(where).Count(&total).Error
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func buildWhere(where map[string]any) string {
+	var wheres []string
+	for k, v := range where {
+		wheres = append(wheres, fmt.Sprintf("%s = %v", k, v))
+	}
+	return strings.Join(wheres, " AND ")
+}
+
+func Exists(table string, where map[string]any) (bool, error) {
+	var exist bool
+	sql := fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s WHERE %s)", table, buildWhere(where))
+	err := db.Raw(sql).Scan(&exist).Error
+	if err != nil {
+		return false, err
+	}
+	return exist, nil
+}
+
+func Delete(table string, ids ...int64) error {
+	db.DryRun = true
+	return db.Table(table).Where("id in ?", ids).Delete(nil).Error
+}
+
+func DeleteBy(table string, conds map[string]any) error {
+	db.DryRun = true
+	return db.Table(table).Where(conds).Delete(nil).Error
+}
+
+func DeleteByColumn(table string, column string, ids ...any) error {
+	db.DryRun = true
+	idCond := column + " in ?"
+	return db.Table(table).Where(idCond, ids).Delete(nil).Error
+}
+
+func Update(table string, data map[string]any, ids ...int64) error {
+	db.DryRun = true
+	if len(ids) == 0 || len(data) == 0 {
+		return nil
+	}
+
+	return db.Table(table).Where("id in ?", ids).Updates(data).Error
+}
+
+func UpdateBy(table string, conds map[string]any, data map[string]any) error {
+	db.DryRun = true
+	return db.Table(table).Where(conds).Updates(data).Error
+}
+
+func demo106() {
+	// []int64{100, 220, 800}
+	ok, err := Exists("robot_membership", map[string]any{"ent_id": 11})
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	log.Println(ok)
+
+	cnt, err := Count("robot_membership", map[string]any{"ent_id": 10})
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	log.Println(cnt)
+
+	var ms []Membership
+	if err := Find("robot_membership", &ms, map[string]any{"ent_id": 10}); err != nil {
+		if err != nil {
+			log.Fatalf("err: %v\n", err)
+		}
+	}
+	log.Println(ms[2])
+
+	var m Membership
+	if err := GetOne("robot_membership", map[string]any{"ent_id": 10}, &m, "provider"); err != nil {
+		if err != nil {
+			log.Fatalf("err: %v\n", err)
+		}
+	}
+	log.Println(m)
+
+	var provider string
+	if err := FindByColumn("robot_membership", "provider", &provider, map[string]any{"ent_id": 2}); err != nil {
+		if err != nil {
+			log.Fatalf("err: %v\n", err)
+		}
+	}
+	log.Println(provider)
+
+	DeleteBy("robot_membership", map[string]any{"robot_id": 9150})
+	ids := []int64{175, 176, 177}
+	Delete("call_sw_bill", ids...)
+	Delete("call_sw_bill")
+	DeleteByColumn("robot_membership", "robot_id", 9150, 9152)
+	UpdateBy("robot_membership", map[string]any{"robot_id": 9150}, map[string]any{"provider": "feishu"})
+	Update("call_sw_bill", map[string]any{"provider": "feishu"}, 176)
+}
+
+type Node struct {
+	NodeType string         `mapstructure:"node_type" json:"node_type"`
+	NodeData map[string]any `mapstructure:"node_data" json:"node_data"`
+}
+
+type Trigger struct {
+	Type string         `mapstructure:"type" json:"type"`
+	Rule map[string]any `mapstructure:"rule" json:"rule"`
+}
+
+type AutoRule struct {
+	ID          int64     `json:"id,omitempty"`
+	EntID       int64     `json:"ent_id,omitempty"`
+	Rank        int64     `json:"rank,omitempty"`
+	Name        string    `json:"name,omitempty"`
+	TriggerType string    `json:"trigger_type,omitempty"`
+	Trigger     Trigger   `json:"trigger,omitempty" gorm:"serializer:json"`
+	Flow        []Node    `json:"flow,omitempty" gorm:"serializer:json"`
+	UpdatedAt   time.Time `json:"updated_at,omitempty"`
+	Enabled     bool      `json:"enabled,omitempty"`
+	IsTemplate  bool      `json:"is_template,omitempty"`
+}
+
+func (*AutoRule) TableName() string {
+	return "auto_rule"
+}
+
+type AgentConvCntV1 struct {
+	AgentID int64 `json:"agent_id"`
+	ConvCnt int64 `json:"conv_cnt"`
+}
+
+func demo107() {
+	var rules []*AutoRule
+	err := Find("auto_rule", &rules, map[string]any{"ent_id": 1, "is_template": false}, "id", "rank", "flow", "trigger")
+	if err != nil {
+		log.Fatalf("got querr err: %v\n", err)
+	}
+
+	log.Println(len(rules))
+	for _, r := range rules {
+		log.Println(r.ID, r.Trigger, r.Flow)
+	}
+
+	var cnts []AgentConvCnt
+	// err = db.Raw("SELECT agent_id, COUNT(*) AS conv_cnt FROM chat_session WHERE agent_id IN (?) AND ended_at IS NULL GROUP BY agent_id", []int64{37, 40}).Scan(&cnts).Error
+	err = db.Raw("SELECT agent_id, COUNT(*) AS conv_cnt FROM chat_session WHERE ent_id = ? AND agent_id IN (?) AND ended_at IS NULL GROUP BY agent_id", 1000001, []int64{37, 40}).Scan(&cnts).Error
+	if err != nil {
+		log.Fatalf("got querr err: %v\n", err)
+	}
+
+	log.Println(cnts)
+}
+
+type AgentV1 struct {
+	ID       int64  `gorm:"column:id"`
+	EntID    int64  `gorm:"column:ent_id"`
+	Realname string `gorm:"columm:realname"`
+}
+
+func (*AgentV1) TableName() string {
+	return "agent"
+}
+
+func demo108() {
+	agentIDs := []int64{38, 42}
+	var orderedIDs []int64
+	err := db.Model(Agent{}).Select("id").Where("id IN ?", agentIDs).Order("`rank` ASC").Pluck("id", &orderedIDs).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+
+	log.Println(orderedIDs)
+
+	var agents []AgentV1
+	if err := FindIn("agent", &agents, "id", agentIDs, "id", "ent_id", "realname"); err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	log.Println(agents)
+}
+
+type ChatMsg struct {
+	ID        int64  `gorm:"column:id"`
+	ConvID    int64  `gorm:"column:conv_id"`
+	SessionID int64  `gorm:"column:session_id"`
+	FromType  string `gorm:"column:from_type"`
+	MsgType   string `gorm:"column:msg_type"`
+}
+
+func (*ChatMsg) TableName() string {
+	return "chat_msg"
+}
+
+// type ChatSession struct {
+// 	ID        int64        `gorm:"column:id"`
+// 	EntID     int64        `gorm:"column:ent_id"`
+// 	ConvID    int64        `gorm:"column:conv_id"` // 对应 restsendx 中的 topic_id
+// 	AgentID   int64        `gorm:"column:agent_id"`
+// 	ClientID  string       `gorm:"column:client_id"`
+// 	EndedType string       `gorm:"column:ended_type"`
+// 	CreatedAt time.Time    `gorm:"column:created_at"`
+// 	UpdatedAt time.Time    `gorm:"column:updated_at"`
+// 	EndedAt   sql.NullTime `gorm:"column:ended_at"`
+// }
+
+type ChatSession struct {
+	ID                   int64      `json:"id"`
+	EntID                int64      `json:"ent_id"`
+	ConvID               int64      `json:"conv_id"` // 对应 restsendx 中的 topic_id
+	AgentID              int64      `json:"agent_id"`
+	ClientID             string     `json:"client_id"`
+	VisitID              string     `json:"visit_id"`
+	Source               string     `json:"source"`
+	SubSource            string     `json:"sub_source"`
+	LastMsgContent       string     `json:"last_msg_content"`
+	LastMsgCreatedAt     *time.Time `json:"last_msg_created_at"`
+	ClientMsgNum         int64      `json:"client_msg_num"`
+	AgentEffectiveMsgNum int64      `json:"agent_effective_msg_num"`
+	EndedType            string     `json:"ended_type"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+	EndedAt              *time.Time `json:"ended_at"`
+}
+
+func (*ChatSession) TableName() string {
+	return "chat_session"
+}
+
+func demo109() {
+	var msgID int64 = 7
+	var minID int64
+	if err := db.Model(&ChatMsg{}).Select("COALESCE(MIN(`id`), 0) AS minID").Where("session_id = ? AND from_type = 'client'", 3).Pluck("minID", &minID).Error; err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+
+	log.Println(msgID, minID)
+
+	var session ChatSession
+	columns := []string{"id", "agent_id", "created_at"}
+	err := db.Model(&ChatSession{}).Where("ent_id = ? AND client_id = ? AND ended_at IS NULL", 1000001, "2tIVsmHy1N0nxPpUH5VCWmsXhHj").Select(columns).Limit(1).Find(&session).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	log.Println(session.ID)
+
+	var sess ChatSession
+	err = db.Where("ent_id =? AND client_id =?", 1000001, "fuck").Order("id DESC").Limit(1).Find(&sess).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	log.Println("----->", sess)
+
+	var sess1 ChatSession
+	err = db.Where("ent_id =? AND client_id =?", 1000001, "2tWdCx3ULiSezjT9boeuZK0N4uO").Order("id DESC").Limit(1).Find(&sess1).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+
+	log.Println(sess1.EndedAt)
+}
+
+func demo110(entID int64, triggerType string, columns ...string) {
+	var rules []*AutoRule
+	err := db.Model(&AutoRule{}).Select(columns).Where("ent_id = ? AND trigger_type = ? AND is_template = 0 AND enabled = 1", entID, triggerType).Scan(&rules).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+
+	for _, r := range rules {
+		log.Println(r.ID, r.Name)
+	}
+}
+
 func Main() {
-	demo34()
+	// demo110(1000001, "client_send_message", "id", "name", "trigger", "flow", "rank")
+	demo109()
 }

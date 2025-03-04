@@ -1045,6 +1045,68 @@ func demo30() {
 	}
 }
 
+var (
+	script = `
+	local sms = redis.call("get", KEYS[1])
+	if sms == false then
+		return nil
+	else
+		redis.call("del", KEYS[1])
+		if sms == ARGV[1] then
+			return 1
+		else
+			return 0
+		end
+	end
+	`
+
+	scriptSha string
+)
+
+func init() {
+	scriptSha, _ = rdb.ScriptLoad(ctx, script).Result()
+	fmt.Println("sha: ", scriptSha)
+}
+
+func demo31() {
+	// ok, err := rdb.EvalSha(ctx, scriptSha, []string{"demo-31"}, "12345678A").Result()
+	ok, err := rdb.Eval(ctx, script, []string{"demo-31"}, "12345678A").Bool()
+	if err != nil && errors.Is(err, redis.Nil) {
+		log.Fatalf("got err --- : %v\n", err)
+	} else {
+		log.Println("ok:", ok)
+	}
+}
+
+type Info struct {
+	AgentID int64  `json:"agent_id"`
+	Token   string `json:"token"`
+}
+
+func demo32() {
+	v := Info{
+		AgentID: 100,
+		Token:   "12345678A",
+	}
+	dat, _ := json.Marshal(v)
+	if err := rdb.Set(ctx, "demo-32", dat, 3*time.Hour).Err(); err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+
+	dat, err := rdb.GetDel(ctx, "demo-32").Bytes()
+	if err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+
+	log.Println(string(dat))
+	var info Info
+	if err := json.Unmarshal(dat, &info); err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+
+	log.Println(info)
+}
+
 func Main() {
-	demo30()
+	demo32()
 }
