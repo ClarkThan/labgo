@@ -24,6 +24,8 @@ import (
 	"github.com/ClarkThan/labgo/gormshit/model"
 	"github.com/bwmarrin/snowflake"
 	sql "github.com/go-sql-driver/mysql"
+	"github.com/mitchellh/mapstructure"
+	"github.com/samber/lo"
 )
 
 const (
@@ -1266,12 +1268,18 @@ func demo109() {
 	log.Println("----->", sess)
 
 	var sess1 ChatSession
-	err = db.Where("ent_id =? AND client_id =?", 1000001, "2tWdCx3ULiSezjT9boeuZK0N4uO").Order("id DESC").Limit(1).Find(&sess1).Error
+	err = db.Where("ent_id =? AND client_id =?", 1000001, "2tWdCx3ULiSezjT9boeuZK0N4uO").Order("id DESC").Limit(1).First(&sess1).Error
 	if err != nil {
 		log.Fatalf("err: %v\n", err)
 	}
 
 	log.Println(sess1.EndedAt)
+
+	var agentID int64
+	if err := GetOne("chat_session", map[string]any{"id": 113, "ended_at": nil}, &agentID, "agent_id"); err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	log.Println(agentID)
 }
 
 func demo110(entID int64, triggerType string, columns ...string) {
@@ -1286,7 +1294,49 @@ func demo110(entID int64, triggerType string, columns ...string) {
 	}
 }
 
+func toInt64List(v any) []int64 {
+	if v == nil {
+		return nil
+	}
+
+	vs, _ := v.([]any)
+	log.Println("---", vs)
+	ret := make([]int64, 0, len(vs))
+	for _, v := range vs {
+		vv, _ := v.(float64)
+		ret = append(ret, int64(vv))
+	}
+
+	return ret
+}
+
+type MM struct {
+	CustomerTags any `mapstructure:"customer_tag" json:"customer_tag"`
+	ClientTags   any `mapstructure:"client_tag" json:"client_tag"`
+}
+
+func demo111() {
+	dat := []byte(`{"tags":{"customer_tag":[11,12],"client_tag":[11,12]}}`)
+	var dict map[string]any
+	if err := json.Unmarshal(dat, &dict); err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	var mm MM
+	if err := mapstructure.Decode(dict["tags"], &mm); err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	// tags1 := []int64{11, 12}
+	// tags2 := []int64{11, 12}
+	// m := map[string]any{"customer_tag": tags1, "client_tag": tags2}
+	// left := toInt64List(m["customer_tag"])
+	// right := toInt64List(m["client_tag"])
+	left := toInt64List(mm.CustomerTags)
+	right := toInt64List(mm.ClientTags)
+	lx, rx := lo.Difference(left, right)
+	log.Println(left, right, lx, rx)
+}
+
 func Main() {
 	// demo110(1000001, "client_send_message", "id", "name", "trigger", "flow", "rank")
-	demo109()
+	demo111()
 }

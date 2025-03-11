@@ -30,6 +30,7 @@ import (
 	// prog "github.com/ClarkThan/labgo/benchshit"
 	// prog "github.com/ClarkThan/labgo/minioshit"
 	// prog "github.com/ClarkThan/labgo/syncshit"
+	// prog "github.com/ClarkThan/labgo/delayshit"
 )
 
 func main() {

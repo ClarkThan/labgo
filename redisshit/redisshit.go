@@ -1107,6 +1107,11 @@ func demo32() {
 	log.Println(info)
 }
 
+func demo33() {
+	val := rdb.HGet(ctx, "shit", "damn").String()
+	log.Println(val)
+}
+
 func Main() {
 	demo32()
 }
