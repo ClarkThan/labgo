@@ -1108,10 +1108,44 @@ func demo32() {
 }
 
 func demo33() {
-	val := rdb.HGet(ctx, "shit", "damn").String()
-	log.Println(val)
+	// res, err := rdb.HGet(ctx, "shit", "damn").Result()
+	// if err != nil {
+	// 	log.Fatalf("got err: %v\n", err)
+	// }
+	// log.Println("hget: ", res)
+	data, err := rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Expire(ctx, "shit", 5*time.Minute)
+		pipe.HGet(ctx, "shit", "foo")
+		pipe.HSet(ctx, "shit", "foo", "jordan")
+		return nil
+	})
+
+	log.Println("pipeline data: ", data, len(data))
+	if err != nil {
+		log.Printf("got xxx err: %v\n", err)
+	}
+
+	res, ok := data[1].(*redis.StringCmd)
+	if ok {
+		log.Println("got sub: ", res.Val())
+	}
+
+	for _, it := range data {
+		d, ok := it.(*redis.StringCmd)
+		if ok {
+			log.Println("got deleted: ", d.Val())
+		}
+	}
+
+	return
+
+	cnt, err := rdb.SRem(ctx, "sset", "foo", "bar").Result()
+	if err != nil {
+		log.Fatalf("got err: %v\n", err)
+	}
+	log.Println(cnt)
 }
 
 func Main() {
-	demo32()
+	demo33()
 }
