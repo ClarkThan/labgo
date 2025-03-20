@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Package",
             "type": "go",
-            "request": "attach",
-            "mode": "local",
-            "processId": 0,
-            "program": "${workspaceRoot}"
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}",
         }
     ]
 }

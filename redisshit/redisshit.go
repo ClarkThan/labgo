@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	// "github.com/redis/go-redis/v9"
@@ -39,22 +41,6 @@ func init() {
 	// log.Fatalf("init rdb falied")
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		log.Fatalf("init rdb failed: %v\n", err)
-	}
-}
-
-func demo1() {
-	redisKey := "demo1-key"
-	data := make(map[string]interface{}, 0)
-
-	_, err := rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.HSet(ctx, redisKey, data)
-		pipe.Expire(ctx, redisKey, 30*time.Second) // 假设对话时长不会超过 1 小时
-		return nil
-	})
-
-	if err != nil {
-		// ERR wrong number of arguments for 'hset' command
-		log.Fatalf("redis operation failed, error: %v\n", err)
 	}
 }
 
@@ -1146,6 +1132,129 @@ func demo33() {
 	log.Println(cnt)
 }
 
+type TabledKnowledgeVarData struct {
+	RowID int64  `json:"row_id" db:"id"`
+	Var1  string `json:"var1" db:"var1"`
+	Var2  string `json:"var2" db:"var2"`
+	Var3  string `json:"var3" db:"var3"`
+	Var4  string `json:"var4" db:"var4"`
+	Var5  string `json:"var5" db:"var5"`
+}
+
+func demo34() {
+	v1 := TabledKnowledgeVarData{
+		RowID: 100,
+		Var1:  "1",
+		Var2:  "2",
+		Var3:  "*",
+		Var4:  "*",
+	}
+
+	v := reflect.ValueOf(v1)
+	for _, f := range []string{"var1", "var2", "var3", "var4", "var5"} {
+		varField := strings.Replace(f, "var", "Var", 1)
+		log.Println(v.FieldByName(varField).String())
+	}
+}
+
+func find_special(arr []int64) int64 {
+	if len(arr) < 3 {
+		return -1
+	}
+
+	// 1 20 8 3
+	// 1 5 10 7 20
+	// 20 5 11 14
+	// {1, 5, 10, 7, 20}
+	for i := 0; i < len(arr)-2; i++ {
+		left, middle, right := arr[i], arr[i+1], arr[i+2]
+		if left < middle && middle > right {
+			if i+3 == len(arr) {
+				return middle
+			}
+			if right < arr[i+3] {
+				return middle
+			}
+			return left
+		} else if left > middle && middle < right {
+			if i+3 == len(arr) {
+				return middle
+			}
+			if right > arr[i+3] {
+				return middle
+			}
+			return left
+		}
+
+		i++
+	}
+
+	return -1
+}
+
+func find_special_gpt(arr []int64) int64 {
+	// 检查数组是否正序排列
+	isAscending := true
+	for i := 1; i < len(arr); i++ {
+		if arr[i] < arr[i-1] {
+			isAscending = false
+			break
+		}
+	}
+
+	// 检查数组是否反序排列
+	isDescending := true
+	for i := 1; i < len(arr); i++ {
+		if arr[i] > arr[i-1] {
+			isDescending = false
+			break
+		}
+	}
+
+	// 如果数组仍然有序，则没有特殊数字
+	if isAscending || isDescending {
+		return -1
+	}
+
+	// 找出破坏正序的数字
+	for i := 1; i < len(arr)-1; i++ {
+		if arr[i] < arr[i-1] && arr[i] < arr[i+1] {
+			return arr[i]
+		}
+		if arr[i] > arr[i-1] && arr[i] > arr[i+1] {
+			return arr[i]
+		}
+	}
+
+	// 如果未找到，检查边界情况
+	if arr[0] > arr[1] {
+		return arr[0]
+	}
+	if arr[len(arr)-1] < arr[len(arr)-2] {
+		return arr[len(arr)-1]
+	}
+
+	return -1
+}
+
+func demo35() {
+	// arr := []int64{}
+
+	cases := [][]int64{
+		{1, 4, 3},
+		{1, 20, 8, 3},
+		{1, 5, 10, 7, 20},
+		{20, 5, 11, 14},
+		{1, 5, 10, 7, 20},
+	}
+
+	for _, arr := range cases {
+		val := find_special(arr)
+		val1 := find_special_gpt(arr)
+		log.Println(arr, " got ", val, val1)
+	}
+}
+
 func Main() {
-	demo33()
+	demo35()
 }
