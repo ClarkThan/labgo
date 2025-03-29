@@ -1,18 +1,43 @@
 package jsonshit
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
-	"github.com/ClarkThan/labgo/utils"
 	"github.com/buger/jsonparser"
 	"github.com/bytedance/sonic"
 	"github.com/segmentio/ksuid"
 	"github.com/tidwall/gjson"
 	"github.com/valyala/fastjson"
+
+	"github.com/ClarkThan/labgo/utils"
 )
+
+// 使用sync.Pool复用缓冲区
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
+
+func MarshalWithPool(v interface{}) ([]byte, error) {
+	buf := bufferPool.Get().(*bytes.Buffer)
+	defer bufferPool.Put(buf)
+	buf.Reset()
+
+	encoder := json.NewEncoder(buf)
+	if err := encoder.Encode(v); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
 
 var data = []byte(`{
 	"intentions": [],
@@ -1927,6 +1952,225 @@ func demo5() {
 	fmt.Println(m2)
 }
 
+type BigInt struct {
+	Value int64 `json:"value,string"` // 序列化为字符串
+}
+
+func bigTest() {
+	// 使用示例
+	data := `{"value": "9223372036854775807"}`
+	var bi BigInt
+	json.Unmarshal([]byte(data), &bi)
+	fmt.Println(bi.Value)
+}
+
+type MyTime struct {
+	time.Time
+}
+
+func (t *MyTime) MarshalJSON() ([]byte, error) {
+	if t.Time.IsZero() {
+		return []byte(""), nil
+	}
+	return []byte(t.Time.Format(`"2006-01-02 15:04:05"`)), nil
+}
+
+func (t *MyTime) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+
+	dataStr := string(data[1:(len(data) - 1)])
+	tt, err := time.Parse("2006-01-02 15:04:05", dataStr)
+	if err != nil {
+		return err
+	}
+
+	t.Time = tt
+	return nil
+}
+
+type Event struct {
+	ID        int    `json:"id"` // 字段重命名
+	Name      string `json:"name"`
+	CreatedAt MyTime `json:"created_at,omitzero"` // 时间格式化为字符串
+}
+
+func demo6() {
+	e := Event{
+		ID:   1,
+		Name: "Meeting",
+		// CreatedAt: MyTime{Time: time.Now()},
+	}
+
+	// 序列化为JSON（带缩进格式化）
+	data, err := json.MarshalIndent(e, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(data))
+
+	jsonStr := `{"id":2,"name":"Bob","created_at":"2025-03-24 10:08:57"}`
+	var e1 Event
+	if err := json.Unmarshal([]byte(jsonStr), &e1); err != nil {
+		panic(err)
+	}
+
+	fmt.Println(e1.CreatedAt)
+}
+
+func demo7() {
+	e := Event{
+		ID:        1,
+		Name:      "Meeting",
+		CreatedAt: MyTime{Time: time.Now()},
+	}
+
+	encoded, _ := MarshalWithPool(e)
+	io.Copy(os.Stderr, bytes.NewBuffer(encoded))
+
+	bs := bytes.Buffer{}
+	if err := json.NewEncoder(&bs).Encode(e); err != nil {
+		log.Fatalf("failed to encode: %v", err)
+	}
+	io.Copy(os.Stdout, &bs)
+	bs.Reset()
+
+	bs.WriteString(`{"id":2,"name":"Bob","created_at":"2025-03-24 10:08:57"}`)
+	var e2 Event
+	if err := json.NewDecoder(&bs).Decode(&e2); err != nil {
+		log.Fatalf("failed to decode: %v", err)
+	}
+	fmt.Println(e2.Name)
+}
+
+func demo8() {
+	// 示例 JSON 数据，包含对象和数组的混合结构
+	data := `{
+		"users": [
+			{"name": "Alice", "age": 30},
+			{"name": "Bob", "age": 25}
+		],
+		"status": "active"
+	}`
+
+	// 创建一个新的 JSON 解码器
+	decoder := json.NewDecoder(strings.NewReader(data))
+
+	// 解析 JSON 对象
+	for {
+		// 检查是否还有更多的 token
+		if !decoder.More() {
+			break
+		}
+
+		// 获取下一个 token
+		token, err := decoder.Token()
+		if err != nil {
+			fmt.Println("Error decoding token:", err)
+			return
+		}
+
+		// 输出 token
+		fmt.Printf("Token: %v\n", token)
+
+		// 如果 token 是一个对象，则进一步解析
+		if delim, ok := token.(json.Delim); ok {
+			if delim == '{' {
+				// 解析对象
+				var obj map[string]interface{}
+				if err := decoder.Decode(&obj); err != nil {
+					fmt.Println("Error decoding object xxx:", err)
+					return
+				}
+				fmt.Printf("Decoded object: %+v\n", obj)
+			} else if delim == '[' {
+				// 解析数组
+				var users []map[string]interface{}
+				if err := decoder.Decode(&users); err != nil {
+					fmt.Println("Error decoding array yyy:", err)
+					return
+				}
+				fmt.Printf("Decoded array: %+v\n", users)
+			}
+		}
+	}
+}
+
+func handleDynamicJSON(data []byte) {
+	var result map[string]any
+	if err := json.Unmarshal(data, &result); err != nil {
+		panic(err)
+	}
+
+	// 类型断言处理字段
+	if name, ok := result["name"].(string); ok {
+		fmt.Println("Name:", name)
+	}
+
+	// 更安全的处理方式：json.RawMessage
+	var raw struct {
+		Metadata json.RawMessage `json:"metadata"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		log.Fatalf("got error: %v", err)
+	}
+
+	// 延迟解析metadata字段
+	var meta map[string]string
+	if err := json.Unmarshal(raw.Metadata, &meta); err != nil {
+		log.Fatalf("got error: %v", err)
+	}
+
+	log.Println(meta)
+}
+
+func demo9() {
+	bs := []byte(`{"name":"Alice","metadata":{"name":"Alice","addr":"Chengdu"}}`)
+	handleDynamicJSON(bs)
+}
+
+type Item struct {
+	Name string `json:"name"`
+	Age  uint8  `json:"age"`
+}
+
+// 处理大型JSON
+func processJSONFlow(r io.Reader) {
+	decoder := json.NewDecoder(r)
+
+	// 读取起始分隔符（如数组的'['）
+	token, err := decoder.Token()
+	if err != nil {
+		panic(err)
+	}
+	if delim, ok := token.(json.Delim); ok && delim.String() != "[" {
+		panic("JSON data does not start with '['")
+	}
+
+	for decoder.More() {
+		var item Item
+		if err := decoder.Decode(&item); err != nil {
+			panic(err)
+		}
+		// 处理每个item...
+		fmt.Println(item.Name, item.Age)
+	}
+
+	// 读取结束分隔符（如数组的']'）
+	token, err = decoder.Token()
+	if err != nil {
+		panic(err)
+	}
+	if delim, ok := token.(json.Delim); ok && delim.String() != "]" {
+		panic("JSON data does not end with ']'")
+	}
+}
+
+func demo10() {
+	bs := bytes.NewBuffer([]byte(`[{"name":"Clark","age":23},{"name":"John","age":24}]`))
+	processJSONFlow(bs)
+}
 func Main() {
-	demo5()
+	demo8()
 }

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>Welcome to my website</h1>
+    <p>This is a paragraph of text.</p>
+    <ul>
+        <li>Item 1</li>
+        <li>Item 2</li>
+        <li>Item 3</li>
+    </ul>
+
+    <body>
+        Mem: <span id="mem"></span><br />
+        CPU: <span id="cpu"></span><br />
+    </body>
+    <script type="text/javascript">
+        const eventSrc = new EventSource("http://127.0.0.1:8080/events");
+        eventSrc.addEventListener("mem", (event) => {
+            document.getElementById("mem").innerHTML = event.data;
+            // document.getElementById("mem")..textContent = event.data;
+        });
+        eventSrc.addEventListener("cpu", (event) => {
+            document.getElementById("cpu").innerHTML = event.data;
+            // document.getElementById("cpu").textContent = event.data;
+        });
+    </script>
+</body>
+
+</html>

@@ -45,6 +45,7 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
 // https://www.freecodecamp.org/news/how-to-implement-server-sent-events-in-go
 func Main() {
 	http.HandleFunc("/events", sseHandler)
+	http.HandleFunc("/events2", sseHandler2)
 	fmt.Println("server is running on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		fmt.Println(err.Error())

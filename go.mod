@@ -42,9 +42,9 @@ require (
 	github.com/nacos-group/nacos-sdk-go v1.1.4
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/panjf2000/gnet/v2 v2.6.3
-	github.com/redis/go-redis/v9 v9.7.1
 	github.com/samber/lo v1.39.0
 	github.com/segmentio/ksuid v1.0.4
+	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/tidwall/gjson v1.17.3
 	github.com/ua-parser/uap-go v0.0.0-20240113215029-33f8e6d47f38
 	github.com/valyala/fastjson v1.6.4
@@ -83,6 +83,7 @@ require (
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
+	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
@@ -125,11 +126,14 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tklauser/go-sysconf v0.3.12 // indirect
+	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.opentelemetry.io/otel v1.26.0 // indirect
 	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
