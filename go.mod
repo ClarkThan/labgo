@@ -50,6 +50,7 @@ require (
 	github.com/valyala/fastjson v1.6.4
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/vmihailenco/taskq/v3 v3.2.9
+	github.com/volcengine/ve-tos-golang-sdk/v2 v2.7.11
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.26.0
 	gopkg.in/yaml.v2 v2.4.0
