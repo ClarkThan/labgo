@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -266,10 +267,12 @@ func demo9() {
 }
 
 type Agent struct {
+	ID      int64  `gorm:"column:id"`
 	EntID   int64  `gorm:"column:ent_id"`
 	GroupID string `gorm:"column:group_id"`
 	Name    string `gorm:"column:name"`
 	Email   string `gorm:"column:email"`
+	HasPass bool   `gorm:"column:has_pass"`
 }
 
 func (*Agent) TableName() string {
@@ -1182,12 +1185,21 @@ func (*AgentV1) TableName() string {
 func demo108() {
 	agentIDs := []int64{38, 42}
 	var orderedIDs []int64
-	err := db.Model(Agent{}).Select("id").Where("id IN ?", agentIDs).Order("`rank` ASC").Pluck("id", &orderedIDs).Error
+	err := db.Model(&Agent{}).Select("id").Where("id IN ?", agentIDs).Order("`rank` ASC").Pluck("id", &orderedIDs).Error
 	if err != nil {
 		log.Fatalf("err: %v\n", err)
 	}
 
 	log.Println(orderedIDs)
+
+	var as []Agent
+	err = db.Model(&Agent{}).Select("id", "ent_id", "password != '' AS has_pass").Where("id IN ?", agentIDs).Order("`rank` ASC").Find(&as).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	for _, a := range as {
+		log.Println(a.ID, a.EntID, a.HasPass)
+	}
 
 	var agents []AgentV1
 	if err := FindIn("agent", &agents, "id", agentIDs, "id", "ent_id", "realname"); err != nil {
@@ -1336,7 +1348,36 @@ func demo111() {
 	log.Println(left, right, lx, rx)
 }
 
+const (
+	cost = 12
+)
+
+func Encrypt(passwd string) (string, error) {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(passwd), cost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashed), nil
+}
+
+func Verify(passwd string, hash string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(passwd))
+}
+
+func demo112() {
+	hash1, _ := Encrypt("12345678")
+	fmt.Println(len(hash1), hash1)
+	hash2, _ := Encrypt("12345678901234567890xxxp")
+	fmt.Println(len(hash2), hash2)
+
+	cipher := "$2a$12$uvllYJlotpXKrxV3FmOLfuGcb4VA.duxkXFkAbhZg6E0/W6cGHaui"
+	err := Verify("12345678", cipher)
+	if err != nil {
+		log.Fatalf("密码错误")
+	}
+}
+
 func Main() {
 	// demo110(1000001, "client_send_message", "id", "name", "trigger", "flow", "rank")
-	demo111()
+	demo112()
 }
