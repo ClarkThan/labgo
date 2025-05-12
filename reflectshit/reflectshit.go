@@ -272,6 +272,53 @@ func demo6() {
 	// fmt.Printf("%#v\n", want)
 }
 
+type EffectiveSetting struct {
+	Condition string `json:"condition"`
+	Rule      string `json:"rule"`
+	Count     int64  `json:"count"`
+}
+
+type RuleSettings struct {
+	EffectiveSetting EffectiveSetting `json:"effective_setting"`
+	EffectiveTime    string           `json:"effective_time"`
+	OK               bool             `json:"ok"`
+}
+
+func IsZero(v any) bool {
+	return reflect.DeepEqual(v, reflect.Zero(reflect.TypeOf(v)).Interface())
+}
+
+func demo7() {
+	var r RuleSettings
+	r.OK = true
+	// rv := reflect.ValueOf(r)
+	fmt.Println(IsZero(r))
+	var x map[string]struct{}
+	fmt.Println(IsZero(x))
+	y := make(map[string]struct{})
+	fmt.Println(IsZero(y))
+	z := []string{}
+	fmt.Println(IsZero(z))
+}
+
 func Main() {
-	demo4()
+	_, _ = demo8(0)
+	_, _ = demo8(9)
+	_, _ = demo8(3)
+}
+
+func demo8(n int) (ret int, err error) {
+	defer func() {
+		fmt.Printf("ret: %d, err: %v\n", ret, err)
+	}()
+	if n == 0 {
+		return 0, fmt.Errorf("zero")
+	}
+
+	if n > 3 {
+		ret = 33
+		return
+	}
+
+	return n, nil
 }

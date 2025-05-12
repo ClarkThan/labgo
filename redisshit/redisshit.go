@@ -1037,11 +1037,11 @@ var (
 	if sms == false then
 		return nil
 	else
-		redis.call("del", KEYS[1])
 		if sms == ARGV[1] then
+			redis.call("del", KEYS[1])
 			return 1
 		else
-			return 0
+			return -1
 		end
 	end
 	`
@@ -1056,9 +1056,9 @@ func init() {
 
 func demo31() {
 	// ok, err := rdb.EvalSha(ctx, scriptSha, []string{"demo-31"}, "12345678A").Result()
-	ok, err := rdb.Eval(ctx, script, []string{"demo-31"}, "12345678A").Bool()
+	ok, err := rdb.Eval(ctx, script, []string{"demo-31"}, "abc").Int64()
 	if err != nil && errors.Is(err, redis.Nil) {
-		log.Fatalf("got err --- : %v\n", err)
+		log.Fatalf("过期 --- : %v\n", err)
 	} else {
 		log.Println("ok:", ok)
 	}
@@ -1256,5 +1256,5 @@ func demo35() {
 }
 
 func Main() {
-	demo35()
+	demo31()
 }

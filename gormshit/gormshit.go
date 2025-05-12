@@ -42,6 +42,7 @@ const (
 var (
 	db            *gorm.DB
 	snowflakeNode *snowflake.Node
+	ctx           = context.Background()
 )
 
 func initRWDB() {
@@ -1254,6 +1255,15 @@ type ChatSession struct {
 func (*ChatSession) TableName() string {
 	return "chat_session"
 }
+func demo1091() {
+	var session ChatSession
+	columns := []string{"ended_at"}
+	err := db.Model(&ChatSession{}).Where("ent_id = ? AND id = ?", 1000001, 19).Select(columns).Limit(1).Find(&session).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	log.Println("ended_at: ", session.EndedAt == nil)
+}
 
 func demo109() {
 	var msgID int64 = 7
@@ -1377,7 +1387,35 @@ func demo112() {
 	}
 }
 
+func GetLastMsgSender(ctx context.Context, entID int64, clientID string) (string, error) {
+	var sender string
+	sql := "SELECT mc.sender_id FROM multiple_chats AS mc INNER JOIN chat_session AS cs ON cs.conv_id = mc.topic_id where cs.ent_id = ? and cs.client_id = ? order by mc.seq desc limit 1"
+	err := db.Raw(sql, entID, clientID).Scan(&sender).Error
+	if err != nil {
+		return "", err
+	}
+	return sender, nil
+}
+
+func demo113() {
+	sender, err := GetLastMsgSender(ctx, 1000016, "2vZTnSqHwOStEtomaeCPygojDul")
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+	log.Println(len(sender), sender, sender == "")
+}
+
+func demo114() {
+	ruleID := 123
+	granularity := "client:xxxxx"
+	sql := "INSERT INTO auto_rule_trigger_stat (rule_id, granularity, count) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE count = count + 1"
+	err := db.Exec(sql, ruleID, granularity).Error
+	if err != nil {
+		log.Fatalf("err: %v\n", err)
+	}
+}
+
 func Main() {
 	// demo110(1000001, "client_send_message", "id", "name", "trigger", "flow", "rank")
-	demo112()
+	demo1091()
 }

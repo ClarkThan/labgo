@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -50,7 +52,7 @@ func init() {
 func NewClient() *http.Client {
 	return &http.Client{
 		Transport: RoundTripper,
-		// Timeout:   10 * time.Second,
+		Timeout:   10 * time.Second,
 	}
 }
 
@@ -68,10 +70,6 @@ type ErrInfo struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
-}
-
-func Main() {
-	demo4()
 }
 
 func demo1() {
@@ -416,4 +414,63 @@ func demo4() {
 	log.Println("resp body: ", string(dat))
 
 	log.Println("got answer: ", ans.Answer)
+}
+
+func detectContentType(ctype string) string {
+	_, params, err := mime.ParseMediaType(ctype)
+	fmt.Printf("params: %v\n", params)
+	if err != nil {
+		return ""
+	}
+	return params["chatset"]
+}
+
+func demo5() {
+	client := NewClient()
+
+	q := Req{CorpusID: "63", Question: "分配规则有哪些？"}
+	payload, _ := json.Marshal(q)
+	url1 := "https://eo4ab8m825kizz.m.pipedream.net"
+	url1 = "https://wwww.baidu.com"
+
+	start := time.Now()
+
+	req, err := http.NewRequest("POST", url1, bytes.NewBuffer(payload))
+	if err != nil {
+		log.Fatalf("new request failed: %v\n", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; q=1.0, text/plain; q=0.8")
+
+	resp, err := client.Do(req)
+
+	elapsed := time.Since(start).Milliseconds()
+	if err != nil {
+		var e interface{ Timeout() bool }
+		if errors.As(err, &e) && e.Timeout() {
+			fmt.Printf("超时拉: %dms", elapsed)
+		}
+		log.Fatalf("请求失败: %v\n", err)
+	}
+
+	defer resp.Body.Close()
+	fmt.Printf("content-type: %s\n", resp.Header.Get("Content-Type"))
+	// fmt.Printf("content-type: %s\n", detectContentType(resp.Header.Get("Content-Type")))
+	respContentType := strings.ToLower(resp.Header.Get("Content-Type"))
+	if respContentType != "" && !strings.Contains(respContentType, "application/json") {
+		log.Fatalf("bad resp content-type: %s", respContentType)
+	}
+
+	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 8*(2<<10)))
+	if err != nil {
+		fmt.Printf("decode gptbot resp failed;  %v", err)
+		return
+	}
+
+	fmt.Printf("(%dms)答案: %s", elapsed, respBytes)
+}
+
+func Main() {
+	demo5()
 }
